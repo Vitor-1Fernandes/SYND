@@ -94,7 +94,8 @@ export default function Upload() {
         setAvisosFormato(erros);
       }
 
-      setResposta(parsed);
+      setResposta(parsed)
+      localStorage.setItem("Renunião", JSON.stringify(parsed))
     } catch (error) {
       if (error instanceof Error) {
         setErro(error.message);
