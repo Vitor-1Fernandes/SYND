@@ -1,0 +1,193 @@
+
+
+
+Você é uma IA especialista em análise de reuniões de negócio, relacionamento com clientes, Customer Success e identificação de oportunidades comerciais para a TOTVS (maior empresa de tecnologia do Brasil, líder em software de gestão ERP/RH, atuando em 3 unidades de negócio: TOTVS Gestão, RD Station e TOTVS Techfin).
+
+Sua tarefa é analisar a transcrição anonimizada da reunião abaixo, considerando também os dados contextuais da reunião e do cliente fornecidos.
+
+Gere uma análise objetiva e estruturada, preenchendo o JSON abaixo:
+
+{
+  "resumo_geral": "string",
+  "principais_assuntos": "string",
+  "dores": ["dict(texto: string, trecho: string | null)"],
+  "oportunidades": ["dict(texto: string, trecho: string | null)"],
+  "risco_churn": "baixo | medio | alto",
+  "evidencias_churn": ["dict(texto: string, trecho: string | null)"],
+  "sentimento": 0.0,
+  "tarefas": ["dict(nome: string, data_prevista: string | null, trecho: string | null)"]
+}
+
+Dicionário de dados:
+- resumo_geral: Resumo geral da reunião, em português do Brasil, com no máximo 600 caracteres.
+- principais_assuntos: Principais assuntos tratados na reunião, incluindo produtos/soluções TOTVS mencionados (ex: Protheus, RM, Fluig, RD Station, Techfin, ou outros citados), quando aplicável.
+- dores: Lista de dores, reclamações ou dificuldades operacionais/comerciais mencionadas pelo cliente em relação a produtos, processos ou atendimento. Máximo de 5 itens, ordenados por relevância. Cada item é um dict com:
+  - texto: a dor resumida em uma frase curta e objetiva
+  - trecho: citação verbatim da transcrição que comprova essa dor específica (ou null se não houver trecho claro o suficiente para citar)
+- oportunidades: Lista de possíveis oportunidades comerciais (cross-sell, upsell, expansão de contrato, novos módulos/produtos do ecossistema TOTVS, melhoria no relacionamento). Máximo de 5 itens, ordenados por relevância/potencial de negócio, considerando a Faixa de Faturamento e o Segmento do cliente como contexto de calibração. Cada item é um dict com:
+  - texto: a oportunidade resumida em uma frase curta e objetiva
+  - trecho: citação verbatim da transcrição que comprova essa oportunidade específica (ou null se não houver trecho claro o suficiente para citar)
+- risco_churn: Percepção de possibilidade de desistência do cliente ("baixo", "medio" ou "alto")
+- evidencias_churn: Lista de sinais que indicam risco real de churn. Máximo de 5 itens. Cada item é um dict com:
+  - texto: o sinal de risco resumido em uma frase curta e objetiva
+  - trecho: citação verbatim da transcrição que comprova esse sinal específico (ou null se não houver trecho claro o suficiente para citar, por exemplo quando o sinal vem do NPS/dados contextuais em vez da conversa)
+- sentimento: Nível de satisfação percebido do cliente, float de 0.0 a 10.0 (uma casa decimal), onde 0.0 é extremamente insatisfeito e 10.0 é extremamente satisfeito.
+- tarefas: Próximas ações recomendadas. Máximo de 5 itens. Cada item é um dict com:
+  - nome: descrição da tarefa
+  - data_prevista: data prevista para entrega da tarefa (ou null se não houver)
+  - trecho: citação verbatim da transcrição que originou essa tarefa (ou null se não houver trecho claro o suficiente para citar)
+
+Critério para classificar "evidência de churn" (aplicar com rigor, pois é o dado mais sensível):
+Só classifique algo como evidencia_churn se houver pelo menos UM dos sinais abaixo, de forma explícita ou fortemente implícita na fala do cliente:
+1. Menção direta a cancelamento, rescisão, não renovação ou encerramento de contrato/módulo.
+2. Menção a avaliação, contratação ou demonstração de solução concorrente como possível SUBSTITUTA de um produto TOTVS atualmente em uso (não conta menção neutra a "pesquisar o mercado" sem intenção de troca).
+3. Insatisfação recorrente ou crítica grave a um produto/processo que o cliente já reclamou antes e não foi resolvida, especialmente se ligada à continuidade do uso.
+4. Sinal explícito de desengajamento com a operação atual: redução de uso, adiamento repetido de decisões de renovação/expansão, questionamento sobre custo-benefício em tom de ameaça de saída.
+5. Declaração direta de insatisfação com a TOTVS como fornecedor (não apenas com uma funcionalidade pontual).
+
+NÃO classifique como evidência de churn:
+- Uma dor ou reclamação pontual sobre uma funcionalidade, sem menção a trocar de fornecedor ou cancelar.
+- Elogio misto com crítica (ex: satisfeito com um módulo, insatisfeito com outro), quando não há ameaça de saída.
+- Comparação neutra com concorrente sem indicação de que o cliente pretende migrar.
+Nesses casos, registre o ponto em "dores", não em "evidencias_churn".
+
+Use "risco_churn":
+- "alto": presença de pelo menos um sinal claro dos critérios 1, 2 ou 5 acima.
+- "medio": presença de sinais dos critérios 3 ou 4, sem indicação direta de cancelamento ou migração.
+- "baixo": ausência desses sinais na conversa, mesmo que existam dores pontuais.
+
+Regras obrigatórias:
+- Cada "trecho" deve ser uma citação literal e contínua da transcrição (não parafraseada, não combinada de partes distintas). Se não existir um trecho único que comprove o item com clareza, use null em vez de inventar ou forçar uma citação.
+- Não crie um item de dor/oportunidade/evidência de churn/tarefa sem uma frase objetiva em "texto" — "trecho" é sempre complementar, nunca o único conteúdo do item.
+- Use a Nota NPS e a Data da última pesquisa, quando disponíveis, como evidência complementar para calibrar `risco_churn` e `sentimento` — uma nota baixa ou desatualizada reforça atenção ao risco mesmo que o tom da conversa pareça neutro. Se não houver NPS disponível, baseie-se apenas na transcrição.
+- Considere a Faixa de Faturamento e o Segmento do cliente como contexto para avaliar a relevância das oportunidades identificadas.
+- A transcrição pode conter ruído de diarização (rótulos de locutor incorretos, fragmentos soltos, texto cortado). Ignore fragmentos sem sentido semântico e interprete o conteúdo da conversa como um todo, sem forçar atribuição perfeita por locutor.
+- Se o responsável por uma tarefa não estiver claro devido a mascaramento ou ambiguidade na transcrição, não adivinhe: descreva a tarefa sem nome de responsável.
+- Não invente informações. A transcrição e os dados contextuais fornecidos abaixo sempre estarão preenchidos; baseie-se exclusivamente neles.
+- Se não houver evidência suficiente para um campo de lista, use lista vazia [] — nunca force um item para atingir o limite de 5.
+- Use somente as informações presentes na transcrição e nos dados fornecidos.
+- Considere que a transcrição já está anonimizada.
+- Responda sempre em português do Brasil (PT-BR), independentemente do idioma da transcrição.
+- Devolva APENAS o JSON válido, com a estrutura exata acima, sem texto antes ou depois, sem markdown, sem ```.
+
+Dados e transcrição da reunião:
+
+
+==============================
+        DADOS DA REUNIÃO
+        ==============================
+        ID da reunião: 1173057
+        Data da reunião: 2026-03-04 08:30:00
+        Formato da reunião: VIDEO
+        ID status da reunião: 3
+        Status da reunião: COMPLETED
+        Duração da reunião: 00:08:18
+        CODT: T15035
+        Tipo de recurso: lead
+        Reunião externa: True
+        Data de criação: 2026-03-03 14:17:16
+        Participantes: ['LOCUTOR 9', 'LOCUTOR 10', 'LOCUTOR 3', 'LOCUTOR 5', 'LOCUTOR 7', 'LOCUTOR 1', 'LOCUTOR 2', 'LOCUTOR 8', 'LOCUTOR 6', 'LOCUTOR 4']
+        Quantidade de participantes: 10
+
+        ==============================
+        DADOS DO CLIENTE / UNIDADE
+        ==============================
+        UF: RS
+        CNAE: 1032599
+        Nome da unidade: TOTVS RIO GRANDE DO SUL
+        Segmento: MANUFATURA
+        Faixa de faturamento do cliente: 08.UPM II - De R$ 480.000.001 a R$ 960.000.000
+        Data da última pesquisa: 2025-11
+        Nota NPS: 10 (De 0 a 10)
+
+        ==============================
+        TRANSCRIÇÃO ANONIMIZADA
+        ==============================
+        [LOCUTOR 9]: para nós, tá?
+[LOCUTOR 10]: Então,
+[LOCUTOR 9]: basicamente, ali, a gente orçou a implantação do módulo de treinamentos que a gente tinha comentado anteriormente, né?
+[LOCUTOR 10]: E
+[LOCUTOR 9]: o que que vai contemplar, né? Toda a parte de parametrização e capacitação inicial, né? Todos os cadastros que vocês vão precisar ter ali dentro do módulo de treinamentos, a parte de registro de treinamento dos funcionários, a parte de planejamento, as avaliações e testes feitos, né, os calendários e as turmas, que é aquilo que vocês nos perguntaram, né, da parte das agendas, de se eu quero programar uma avaliação ou um treinamento para que ele me lembre, ah, todo ano preciso fazer o treinamento em tal data, essa parte a gente configura aqui, né?
+[LOCUTOR 10]: Então,
+[LOCUTOR 9]: todas as movimentações dos treinamentos, o que foi realizado, o que não foi realizado, a parte de gestão e os relatórios. É mais ou menos isso que vocês esperavam? Tem algo que talvez vocês queriam a mais e que não está aqui dentro? Eu
+[LOCUTOR 10]: acredito que não, acredito que é o que a gente viu aquele dia,
+[LOCUTOR 9]: na
+[LOCUTOR 10]: reunião, né, [PESSOA]?
+[LOCUTOR 9]: [LOCAL]. É aquilo que a gente abordou na reunião.
+[LOCUTOR 10]: A gente só tinha questão de customização de comunicados informativos.
+[LOCUTOR 9]: [LOCUTOR 3]: disse que ia colocar a gente no... Sim. Isso está previsto junto, tá? O pessoal ali já nos passou junto. O que que eu tenho aqui daí de valores, né, [PESSOA]? para, daí no caso seria para um CNPJ, para quantidade de 330 funcionários, tá? Que é mais ou menos o que a gente levantou aquele dia. A implantação do módulo de treinamentos, ela ficaria em torno de 36,782, tá? A gente consegue...
+[LOCUTOR 10]: [LOCUTOR 5]: só o treinamento?
+[LOCUTOR 9]: É, junto com a personalização ali, né? É. É, ele é um módulo um pouquinho mais caro. O que a gente consegue fazer aqui? A gente consegue, talvez, estar trabalhando com parcelamento, tá? De
+[LOCUTOR 10]: acordo...
+[LOCUTOR 9]: Não,
+[LOCUTOR 10]: já te adianto que nós não vamos implementar, então.
+[LOCUTOR 9]: Ficou muito caro?
+[LOCUTOR 10]: Nossa, isso... A gente verificou no ano retrasado o módulo de... de recrutamento e seleção. Esse valor era o valor da implementação. Nem era de recrutamento e seleção, era um outro. Nós temos que implementar absolutamente
+[LOCUTOR 9]: todo
+[LOCUTOR 10]: ele, fazer toda a customização. Esse módulo, ele já, pelo que a gente percebeu, ele já está implementado. A gente
+[LOCUTOR 9]: precisaria
+[LOCUTOR 10]: de um treinamento de como utilizar. É isso que nós precisamos. E aí, 36 mil de um treinamento
+[LOCUTOR 9]: [LOCUTOR 7]: alto, da [PESSOA]. O que a gente tem como alternativa para a gente poder estar tá tentando fazer. Posso conversar ali com o pessoal interno de serviços, tá? A gente tem um modelo de atendimento continuado que ele pode ser utilizado para isso, tá, [PESSOA]?
+[LOCUTOR 10]: [LOCUTOR 1]: que que acontece? O modelo de atendimento continuado, ele pode não ser... pode ser usado não só para a questão de RH, ele pode ser utilizado para outros setores também. Ah, eu quero ver essa questão ali do módulo de treinamento do Proteus. Pego essas horas do atendimento continuado e utilizo para o treinamento ali dentro do módulo de treinamentos. Ah, mas o pessoal lá do [LOCAL], no mês que vem, precisa ver alguma coisa dentro do módulo de [LOCAL]. Quero utilizar essas horas. Vocês
+[LOCUTOR 9]: conseguem utilizar lá no [LOCAL], né? Ele é um pacote que a gente vende por 12 meses, né? Vocês utilizam por 12 meses, com um determinado número de horas que vocês queiram por mês ali,
+[LOCUTOR 10]: vocês
+[LOCUTOR 9]: podem estar utilizando essas horas. Eu acho que talvez fique mais dentro do orçamento.
+[LOCUTOR 10]: E qual que é o valor desse pacote?
+[LOCUTOR 9]: Daí o que eu preciso fazer? Agora que a gente entendeu que talvez a implantação aqui, o módulo de investimento ficou fora do orçamento, Preciso ver mais ou menos quantas horas ali precisaria para...
+[LOCUTOR 10]: É,
+[LOCUTOR 9]: porque
+[LOCUTOR 10]: assim, [PESSOA], nós não estamos comprando o módulo, a gente já paga
+[LOCUTOR 9]: ele.
+[LOCUTOR 10]: Sim,
+[LOCUTOR 9]: sim,
+[LOCUTOR 10]: entendo. Estamos pedindo um treinamento aí, 36 mil de um treinamento
+[LOCUTOR 9]: para
+[LOCUTOR 10]: ir ali e dizer, ó, vocês cadastrem isso aqui, que quem vai cadastrar somos nós. É questão de uma hora, uma hora de um consultor de vocês, 36 mil, é...
+[LOCUTOR 9]: Sim. Talvez aqui o pessoal entendeu que vocês precisariam de uma ajuda um pouquinho maior e talvez eles aumentarem o número de horas. Eu posso
+[LOCUTOR 10]: tentar
+[LOCUTOR 9]: voltar com a equipe de serviços ali tentar rever esse valor e ao mesmo tempo tentar ver o [EMPRESA] que ele pode ser mais
+[LOCUTOR 10]: em conta. Hoje nós não temos nenhum projeto que a gente vai demandar por 12 meses É para esse módulo, sabe?
+[LOCUTOR 9]: Sim. Não, perfeito. O que que eu posso fazer, então? Retornar com a equipe de serviços, dar uma olhada nessa questão desse valor, o que que eu consigo fazer, a que valor que eu consigo chegar, e daí depois retornar contigo aqui para a gente poder...
+[LOCUTOR 10]: E nós tínhamos combinado naquela reunião que vocês iam nos encaminhar a gravação da reunião, pra gente testar e ver se faz sentido pra
+[LOCUTOR 9]: nós. Não chegou pra vocês a gravação?
+[LOCUTOR 10]: Tá,
+[LOCUTOR 9]: deixa depois eu dar uma olhada ali nos meus arquivos, eu encaminho pra
+[LOCUTOR 10]: ti por
+[LOCUTOR 9]: e-mail daí.
+[LOCUTOR 10]: Isso, porque também a gente não vai pagar se não faz sentido, entende?
+[LOCUTOR 9]: Sim, entendi.
+[LOCUTOR 10]: [LOCAL] a pouco eu faço teste com um treinamento, né, porque a gente não vai fazer tudo,
+[LOCUTOR 9]: só quero
+[LOCUTOR 10]: testar o treinamento, o registro do treinamento. E não sai no relatório como eu preciso, não sai no escopo como eu preciso. Não vou inventar, né?
+[LOCUTOR 9]: Sim,
+[LOCUTOR 10]: sim,
+[LOCUTOR 9]: entendi.
+[LOCUTOR 10]: Então eu precisaria fazer esse teste. Ou daqui a pouco sim. Ah, não. Olha só. Tem como... [PESSOA] fazer uma parametrização. Aí a gente avalia esses 36 mil.
+[LOCUTOR 9]: [LOCUTOR 2]: agora seria um treinamento. Isso é valor de implementação de um módulo, né? 
+[LOCUTOR 8]: [LOCUTOR 7]: valor de treinamento de um módulo.
+[LOCUTOR 9]: Sim, ele é o valor da implementação mesmo.
+[LOCUTOR 10]: [PESSOA]. E nós já temos o módulo implementado, a gente precisa de um treinamento
+[LOCUTOR 9]: de
+[LOCUTOR 10]: como utilizar. O que eu vou
+[LOCUTOR 9]: fazer, então? Vou voltar com o pessoal de serviços, vou reavaliar essa questão dos valores e daí eu já na sequência...
+[LOCUTOR 10]: [EMPRESA] o treinamento de duas horas. Em duas horas dá para passar o módulo tranquilamente.
+[LOCUTOR 9]: Ou senão, eu vejo ali com o pessoal de serviços, porque o módulo de treinamento fechado, ele sempre vai precisar de mais horas.
+[LOCUTOR 10]: O que eu
+[LOCUTOR 9]: posso talvez ver para voc
+[LOCUTOR 6]: é
+[LOCUTOR 9]: vender as horas
+[LOCUTOR 10]: que
+[LOCUTOR 9]: precisaria para fazer esse treinamento e só vocês utilizam daí para essa parte do módulo de
+[LOCUTOR 10]: treinamento. [LOCAL], pode ser.
+[LOCUTOR 9]: Mas deixa eu ver ali com o pessoal. Aí eu já te
+[LOCUTOR 10]: mando a
+[LOCUTOR 9]: gravação assim que a gente terminar a reunião, eu procuro aqui e te mando.
+[LOCUTOR 10]: [LOCUTOR 4]: acredito que até o final da tarde eu consigo te dar um retorno a respeito disso. [LOCAL], então.
+[LOCUTOR 9]: Pode ser?
+[LOCUTOR 10]: [PESSOA], pode ser.
+[LOCUTOR 9]: Tá, beleza, então. Muito obrigado, tá?
+[LOCUTOR 10]: Até
+[LOCUTOR 9]: mais. Tchau, tchau.
+
+
+{'ID': '1173057', 'Data': '2026-03-04 08:30:00', 'Formato da reunião': 'VIDEO', 'ID status da reunião': '3', 'Status': 'COMPLETED', 'Duração': '00:08:18', 'CODT': 'T15035', 'Tipo de recurso': 'lead', 'Reunião externa': True, 'Data de criação': '2026-03-03 14:17:16', 'UF': 'RS', 'CNAE': '1032599', 'Nome da unidade': 'TOTVS RIO GRANDE DO SUL', 'Segmento': 'MANUFATURA', 'Faixa de faturamento do cliente': '08.UPM II - De R$ 480.000.001 a R$ 960.000.000', 'Data da última pesquisa': '2025-11', 'Nota NPS': '10', 'Transcrição': '[LOCUTOR 9]: para nós, tá?\n[LOCUTOR 10]: Então,\n[LOCUTOR 9]: basicamente, ali, a gente orçou a implantação do módulo de treinamentos que a gente tinha comentado anteriormente, né?\n[LOCUTOR 10]: E\n[LOCUTOR 9]: o que que vai contemplar, né? Toda a parte de parametrização e capacitação inicial, né? Todos os cadastros que vocês vão precisar ter ali dentro do módulo de treinamentos, a parte de registro de treinamento dos funcionários, a parte de planejamento, as avaliações e testes feitos, né, os calendários e as turmas, que é aquilo que vocês nos perguntaram, né, da parte das agendas, de se eu quero programar uma avaliação ou um treinamento para que ele me lembre, ah, todo ano preciso fazer o treinamento em tal data, essa parte a gente configura aqui, né?\n[LOCUTOR 10]: Então,\n[LOCUTOR 9]: todas as movimentações dos treinamentos, o que foi realizado, o que não foi realizado, a parte de gestão e os relatórios. É mais ou menos isso que vocês esperavam? Tem algo que talvez vocês queriam a mais e que não está aqui dentro? Eu\n[LOCUTOR 10]: acredito que não, acredito que é o que a gente viu aquele dia,\n[LOCUTOR 9]: na\n[LOCUTOR 10]: reunião, né, [PESSOA]?\n[LOCUTOR 9]: [LOCAL]. É aquilo que a gente abordou na reunião.\n[LOCUTOR 10]: A gente só tinha questão de customização de comunicados informativos.\n[LOCUTOR 9]: [LOCUTOR 3]: disse que ia colocar a gente no... Sim. Isso está previsto junto, tá? O pessoal ali já nos passou junto. O que que eu tenho aqui daí de valores, né, [PESSOA]? para, daí no caso seria para um CNPJ, para quantidade de 330 funcionários, tá? Que é mais ou menos o que a gente levantou aquele dia. A implantação do módulo de treinamentos, ela ficaria em torno de 36,782, tá? A gente consegue...\n[LOCUTOR 10]: [LOCUTOR 5]: só o treinamento?\n[LOCUTOR 9]: É, junto com a personalização ali, né? É. É, ele é um módulo um pouquinho mais caro. O que a gente consegue fazer aqui? A gente consegue, talvez, estar trabalhando com parcelamento, tá? De\n[LOCUTOR 10]: acordo...\n[LOCUTOR 9]: Não,\n[LOCUTOR 10]: já te adianto que nós não vamos implementar, então.\n[LOCUTOR 9]: Ficou muito caro?\n[LOCUTOR 10]: Nossa, isso... A gente verificou no ano retrasado o módulo de... de recrutamento e seleção. Esse valor era o valor da implementação. Nem era de recrutamento e seleção, era um outro. Nós temos que implementar absolutamente\n[LOCUTOR 9]: todo\n[LOCUTOR 10]: ele, fazer toda a customização. Esse módulo, ele já, pelo que a gente percebeu, ele já está implementado. A gente\n[LOCUTOR 9]: precisaria\n[LOCUTOR 10]: de um treinamento de como utilizar. É isso que nós precisamos. E aí, 36 mil de um treinamento\n[LOCUTOR 9]: [LOCUTOR 7]: alto, da [PESSOA]. O que a gente tem como alternativa para a gente poder estar tá tentando fazer. Posso conversar ali com o pessoal interno de serviços, tá? A gente tem um modelo de atendimento continuado que ele pode ser utilizado para isso, tá, [PESSOA]?\n[LOCUTOR 10]: [LOCUTOR 1]: que que acontece? O modelo de atendimento continuado, ele pode não ser... pode ser usado não só para a questão de RH, ele pode ser utilizado para outros setores também. Ah, eu quero ver essa questão ali do módulo de treinamento do Proteus. Pego essas horas do atendimento continuado e utilizo para o treinamento ali dentro do módulo de treinamentos. Ah, mas o pessoal lá do [LOCAL], no mês que vem, precisa ver alguma coisa dentro do módulo de [LOCAL]. Quero utilizar essas horas. Vocês\n[LOCUTOR 9]: conseguem utilizar lá no [LOCAL], né? Ele é um pacote que a gente vende por 12 meses, né? Vocês utilizam por 12 meses, com um determinado número de horas que vocês queiram por mês ali,\n[LOCUTOR 10]: vocês\n[LOCUTOR 9]: podem estar utilizando essas horas. Eu acho que talvez fique mais dentro do orçamento.\n[LOCUTOR 10]: E qual que é o valor desse pacote?\n[LOCUTOR 9]: Daí o que eu preciso fazer? Agora que a gente entendeu que talvez a implantação aqui, o módulo de investimento ficou fora do orçamento, Preciso ver mais ou menos quantas horas ali precisaria para...\n[LOCUTOR 10]: É,\n[LOCUTOR 9]: porque\n[LOCUTOR 10]: assim, [PESSOA], nós não estamos comprando o módulo, a gente já paga\n[LOCUTOR 9]: ele.\n[LOCUTOR 10]: Sim,\n[LOCUTOR 9]: sim,\n[LOCUTOR 10]: entendo. Estamos pedindo um treinamento aí, 36 mil de um treinamento\n[LOCUTOR 9]: para\n[LOCUTOR 10]: ir ali e dizer, ó, vocês cadastrem isso aqui, que quem vai cadastrar somos nós. É questão de uma hora, uma hora de um consultor de vocês, 36 mil, é...\n[LOCUTOR 9]: Sim. Talvez aqui o pessoal entendeu que vocês precisariam de uma ajuda um pouquinho maior e talvez eles aumentarem o número de horas. Eu posso\n[LOCUTOR 10]: tentar\n[LOCUTOR 9]: voltar com a equipe de serviços ali tentar rever esse valor e ao mesmo tempo tentar ver o [EMPRESA] que ele pode ser mais\n[LOCUTOR 10]: em conta. Hoje nós não temos nenhum projeto que a gente vai demandar por 12 meses É para esse módulo, sabe?\n[LOCUTOR 9]: Sim. Não, perfeito. O que que eu posso fazer, então? Retornar com a equipe de serviços, dar uma olhada nessa questão desse valor, o que que eu consigo fazer, a que valor que eu consigo chegar, e daí depois retornar contigo aqui para a gente poder...\n[LOCUTOR 10]: E nós tínhamos combinado naquela reunião que vocês iam nos encaminhar a gravação da reunião, pra gente testar e ver se faz sentido pra\n[LOCUTOR 9]: nós. Não chegou pra vocês a gravação?\n[LOCUTOR 10]: Tá,\n[LOCUTOR 9]: deixa depois eu dar uma olhada ali nos meus arquivos, eu encaminho pra\n[LOCUTOR 10]: ti por\n[LOCUTOR 9]: e-mail daí.\n[LOCUTOR 10]: Isso, porque também a gente não vai pagar se não faz sentido, entende?\n[LOCUTOR 9]: Sim, entendi.\n[LOCUTOR 10]: [LOCAL] a pouco eu faço teste com um treinamento, né, porque a gente não vai fazer tudo,\n[LOCUTOR 9]: só quero\n[LOCUTOR 10]: testar o treinamento, o registro do treinamento. E não sai no relatório como eu preciso, não sai no escopo como eu preciso. Não vou inventar, né?\n[LOCUTOR 9]: Sim,\n[LOCUTOR 10]: sim,\n[LOCUTOR 9]: entendi.\n[LOCUTOR 10]: Então eu precisaria fazer esse teste. Ou daqui a pouco sim. Ah, não. Olha só. Tem como... [PESSOA] fazer uma parametrização. Aí a gente avalia esses 36 mil.\n[LOCUTOR 9]: [LOCUTOR 2]: agora seria um treinamento. Isso é valor de implementação de um módulo, né? \n[LOCUTOR 8]: [LOCUTOR 7]: valor de treinamento de um módulo.\n[LOCUTOR 9]: Sim, ele é o valor da implementação mesmo.\n[LOCUTOR 10]: [PESSOA]. E nós já temos o módulo implementado, a gente precisa de um treinamento\n[LOCUTOR 9]: de\n[LOCUTOR 10]: como utilizar. O que eu vou\n[LOCUTOR 9]: fazer, então? Vou voltar com o pessoal de serviços, vou reavaliar essa questão dos valores e daí eu já na sequência...\n[LOCUTOR 10]: [EMPRESA] o treinamento de duas horas. Em duas horas dá para passar o módulo tranquilamente.\n[LOCUTOR 9]: Ou senão, eu vejo ali com o pessoal de serviços, porque o módulo de treinamento fechado, ele sempre vai precisar de mais horas.\n[LOCUTOR 10]: O que eu\n[LOCUTOR 9]: posso talvez ver para voc\n[LOCUTOR 6]: é\n[LOCUTOR 9]: vender as horas\n[LOCUTOR 10]: que\n[LOCUTOR 9]: precisaria para fazer esse treinamento e só vocês utilizam daí para essa parte do módulo de\n[LOCUTOR 10]: treinamento. [LOCAL], pode ser.\n[LOCUTOR 9]: Mas deixa eu ver ali com o pessoal. Aí eu já te\n[LOCUTOR 10]: mando a\n[LOCUTOR 9]: gravação assim que a gente terminar a reunião, eu procuro aqui e te mando.\n[LOCUTOR 10]: [LOCUTOR 4]: acredito que até o final da tarde eu consigo te dar um retorno a respeito disso. [LOCAL], então.\n[LOCUTOR 9]: Pode ser?\n[LOCUTOR 10]: [PESSOA], pode ser.\n[LOCUTOR 9]: Tá, beleza, então. Muito obrigado, tá?\n[LOCUTOR 10]: Até\n[LOCUTOR 9]: mais. Tchau, tchau.', 'Analise': '{\n  "resumo_geral": "Reunião focada na negociação da implementação de treinamento para o módulo de Treinamentos do Protheus. O cliente demonstrou forte resistência ao valor apresentado (R$ 36 mil), alegando que o módulo já está implementado e que necessita apenas de capacitação para uso, não de uma nova implementação completa. Houve falha na entrega de material prometido anteriormente (gravação de reunião). O clima é de frustração quanto à percepção de custo-benefício, com o cliente exigindo uma revisão da proposta ou uma abordagem mais consultiva e simplificada para prosseguir.",\n  "principais_assuntos": "Módulo de Treinamentos do Protheus, precificação de serviços de capacitação/implantação, modelo de atendimento continuado e alinhamento de escopo.",\n  "dores": [\n    {\n      "texto": "Percepção de custo excessivo para o serviço de capacitação oferecido.",\n      "trecho": "Nós já temos o módulo implementado, a gente precisa de um treinamento de como utilizar. E aí, 36 mil de um treinamento... é alto"\n    },\n    {\n      "texto": "Falha na entrega de materiais de apoio prometidos pela equipe da TOTVS.",\n      "trecho": "E nós tínhamos combinado naquela reunião que vocês iam nos encaminhar a gravação da reunião, pra gente testar e ver se faz sentido pra nós."\n    },\n    {\n      "texto": "Divergência entre a necessidade real do cliente (treinamento pontual) e a proposta de escopo (implementação completa).",\n      "trecho": "O pessoal entendeu que vocês precisariam de uma ajuda um pouquinho maior e talvez eles aumentarem o número de horas."\n    }\n  ],\n  "oportunidades": [\n    {\n      "texto": "Conversão da proposta de implementação em horas avulsas ou atendimento continuado reduzido.",\n      "trecho": "O que eu posso talvez ver para você é vender as horas que precisaria para fazer esse treinamento e só vocês utilizam daí para essa parte do módulo de treinamento."\n    },\n    {\n      "texto": "Aproveitar o interesse no módulo para realizar uma jornada de capacitação customizada que aumente o uso do ERP.",\n      "trecho": "Eu só quero testar o treinamento, o registro do treinamento. E não sai no relatório como eu preciso, não sai no escopo como eu preciso."\n    }\n  ],\n  "risco_churn": "medio",\n  "evidencias_churn": [\n    {\n      "texto": "Questionamento sobre o custo-benefício da consultoria e ameaça velada de não prosseguir com a contratação do serviço.",\n      "trecho": "Isso, porque também a gente não vai pagar se não faz sentido, entende?"\n    },\n    {\n      "texto": "Demonstração de insatisfação clara com o processo comercial e a proposta apresentada.",\n      "trecho": "Não, já te adianto que nós não vamos implementar, então."\n    }\n  ],\n  "sentimento": 3.5,\n  "tarefas": [\n    {\n      "nome": "Revisar escopo e orçamento da proposta com a equipe de serviços.",\n      "data_prevista": "2026-03-04",\n      "trecho": "Vou voltar com o pessoal de serviços, vou reavaliar essa questão dos valores e daí eu já na sequência..."\n    },\n    {\n      "nome": "Enviar a gravação da reunião anterior para o cliente.",\n      "data_prevista": "2026-03-04",\n      "trecho": "deixa depois eu dar uma olhada ali nos meus arquivos, eu encaminho pra ti por e-mail daí."\n    },\n    {\n      "nome": "Retornar ao cliente com uma nova solução de capacitação (horas avulsas).",\n      "data_prevista": "2026-03-04",\n      "trecho": "acredito que até o final da tarde eu consigo te dar um retorno a respeito disso."\n    }\n  ]\n}'}

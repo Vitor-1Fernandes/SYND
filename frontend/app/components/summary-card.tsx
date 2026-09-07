@@ -33,6 +33,7 @@ export function SummaryMetricCard({
         py-3
         sm:py-5
         lg:py-5
+        animate-fade-in-metric
       "
     >
       {/* TÍTULO */}
@@ -101,7 +102,8 @@ export function SummaryMetricCard({
           
             inline-flex
             max-w-full
-            rounded-sm
+            rounded-xs
+            md:rounded-sm
             px-1.5
             py-[2px]
 
