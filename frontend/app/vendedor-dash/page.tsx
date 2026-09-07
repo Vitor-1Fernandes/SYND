@@ -81,11 +81,15 @@ function calcularMetricas(reunioes: ReuniaoRaw[]): MetricasCalculadas {
 export default function Vendedor() {
 
     const [reunioesState, setReunioes] = useState<ReuniaoRaw[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const carregarReunioes = () => {
             const rawStr = localStorage.getItem("Reuniao")
-            if (!rawStr) return
+            if (!rawStr) {
+                setIsLoading(false)
+                return
+            }
 
             try {
                 const data: ReuniaoRaw[] = JSON.parse(rawStr)
@@ -94,6 +98,8 @@ export default function Vendedor() {
                 }
             } catch (e) {
                 console.error("Erro ao parsear reunião do localStorage", e)
+            } finally {
+                setIsLoading(false)
             }
         }
 
@@ -208,29 +214,9 @@ export default function Vendedor() {
                 <div className="relative">
                     <div className="overflow-hidden md:shadow-[0px_25px_20px_-20px_rgba(255,255,255,0.02)]" ref={emblaRef}>
                         <div className="flex">
-                            {!(reunioesState.length > 0) && <div className="flex justify-center w-full p-6">
-                                
-                                <div className="flex justify-center items-center flex-col font-light">
-
-                                    <p className="mb-1"> Para começar...</p>
-                                    <div className="flex flex-row flex-nowrap justify-center items-center gap-2 h-full mb-5 rounded-sm bg-[#064758] text-sm md:text-lg shadow-[0px_5px_1px_-3px_rgba(0,0,0,0.3)] hover:shadow-[0px_1px_5px_-3px_rgba(0,0,0,0.3)] btn-light-hover">
-                                        
-                                        
-                                        <a className="flex flex-row flex-nowrap justify-center items-center gap-2 py-2 px-3 " href="../Exemplo_Transcricao.json" download="Exemplo_Transcricao.json">
-                                        <Download />
-                                        <p className=""> Baixe um Exemplo</p>
-                                        </a>
-
-                                    </div>
-                                    
-                                    <p className="text-center">E faça upload da transcrição na Agenda</p> 
-                                
-                                </div>
-                                
-                                </div>}
-                            {reunioesState.length > 0 &&
+                            {!isLoading && reunioesState.length > 0 &&
                                 reunioesState.map((reuniao) => (
-                                    <div key={reuniao.ID} className="flex-[0_0_100%] min-w-0 flex flex-col md:flex-row md:bg-black/15 rounded-md justify-end">
+                                    <div key={reuniao.ID} className="flex-[0_0_100%] min-w-0 flex flex-col md:flex-row md:bg-black/15 rounded-md justify-end animate-fade-in-metric2">
                                         <article className="w-full md:w-[50%]">
                                             <CardResult {...reuniao} />
                                         </article>
@@ -267,6 +253,33 @@ export default function Vendedor() {
                                         </article>
                                     </div>
                                 ))}
+
+                            {isLoading && (
+                                <div className="flex justify-center items-center w-full p-6 min-h-[200px]">
+                                    <div className="animate-pulse text-sm text-[#bac4ce]">Carregando...</div>
+                                </div>
+                            )}
+
+                            {!isLoading && !(reunioesState.length > 0) && <div className="flex justify-center w-full p-6">
+
+                                <div className="flex justify-center items-center flex-col font-light">
+
+                                    <p className="mb-1"> Para começar...</p>
+                                    <div className="flex flex-row flex-nowrap justify-center items-center gap-2 h-full mb-5 rounded-sm bg-[#064758] text-sm md:text-lg shadow-[0px_5px_1px_-3px_rgba(0,0,0,0.3)] hover:shadow-[0px_1px_5px_-3px_rgba(0,0,0,0.3)] btn-light-hover">
+
+
+                                        <a className="flex flex-row flex-nowrap justify-center items-center gap-2 py-2 px-3 " href="../Exemplo_Transcricao.json" download="Exemplo_Transcricao.json">
+                                            <Download />
+                                            <p className=""> Baixe um Exemplo</p>
+                                        </a>
+
+                                    </div>
+
+                                    <p className="text-center">E faça upload da transcrição na Agenda</p>
+
+                                </div>
+
+                            </div>}
                         </div>
                     </div>
 
@@ -308,7 +321,7 @@ export default function Vendedor() {
                 )}
 
                 <div className="flex justify-center">
-                    <div className="w-full mx-15 rounded-2xl h-[1px] bg-white/20 mb-5"></div>
+                    <div className="w-full mx-15 rounded-2xl h-[1px] bg-white/20 my-5"></div>
                 </div>
 
                 <section>
