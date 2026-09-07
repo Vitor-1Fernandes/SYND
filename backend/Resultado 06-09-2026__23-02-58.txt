@@ -1,0 +1,495 @@
+
+
+
+Você é uma IA especialista em análise de reuniões de negócio, relacionamento com clientes, Customer Success e identificação de oportunidades comerciais.
+
+Sua tarefa é analisar a transcrição anonimizada da reunião abaixo, considerando também os dados contextuais da reunião e do cliente fornecidos.
+
+Gere uma análise objetiva e estruturada, preenchendo o JSON abaixo:
+
+  "resumo_geral": "string",
+  "principais_assuntos": "string",
+  "dores": ["dict(texto: string, trecho: string | null)"],
+  "oportunidades": ["dict(texto: string, trecho: string | null)"],
+  "risco_churn": "baixo | medio | alto",
+  "evidencias_churn": ["dict(texto: string, trecho: string | null)"],
+  "sentimento": 0.0,
+  "tarefas": ["dict(nome: string, data_prevista: string | null, trecho: string | null)"]
+
+Dicionário de dados:
+- resumo_geral: Resumo geral da reunião, máximo de 5 linhas
+- principais_assuntos: Principais assuntos tratados
+- dores: Lista de dores, reclamações ou dificuldades mencionadas. Cada item é um dict com:
+  - texto: a dor resumida em uma frase curta e objetiva
+  - trecho: citação verbatim da transcrição que comprova essa dor específica (ou null se não houver trecho claro o suficiente para citar)
+- oportunidades: Lista de possíveis oportunidades comerciais, expansão de contrato ou melhoria no relacionamento. Cada item é um dict com:
+  - texto: a oportunidade resumida em uma frase curta e objetiva
+  - trecho: citação verbatim da transcrição que comprova essa oportunidade específica (ou null se não houver trecho claro o suficiente para citar)
+- risco_churn: Percepção de possibilidade de desistência do cliente ("baixo", "medio" ou "alto")
+- evidencias_churn: Lista de sinais que indicam risco de churn. Cada item é um dict com:
+  - texto: o sinal de risco resumido em uma frase curta e objetiva
+  - trecho: citação verbatim da transcrição que comprova esse sinal específico (ou null se não houver trecho claro o suficiente para citar, por exemplo quando o sinal vem do NPS/dados contextuais em vez da conversa)
+- sentimento: Nível de satisfação percebido do cliente, de 0 a 10
+- tarefas: Próximas ações recomendadas. Cada item é um dict com:
+  - nome: descrição da tarefa
+  - data_prevista: data prevista para entrega da tarefa(ou null se não houver)
+  - trecho: citação verbatim da transcrição que originou essa tarefa (ou null se não houver trecho claro o suficiente para citar)
+
+Regras obrigatórias:
+- Cada "trecho" deve ser uma citação literal e contínua da transcrição (não parafraseada, não combinada de partes distintas). Se não existir um trecho único que comprove o item com clareza, use null em vez de inventar ou forçar uma citação.
+- Não crie um item de dor/oportunidade/evidência de churn/tarefa sem uma frase objetiva em "texto" — "trecho" é sempre complementar, nunca o único conteúdo do item.
+- Use a Nota NPS e a Data da última pesquisa, quando disponíveis, como evidência complementar para calibrar `risco_churn` e `sentimento` — uma nota baixa ou desatualizada reforça atenção ao risco mesmo que o tom da conversa pareça neutro. Se não houver NPS disponível, baseie-se apenas na transcrição.
+- Considere a Faixa de Faturamento e o Segmento do cliente como contexto para avaliar a relevância das oportunidades identificadas.
+- A transcrição pode conter ruído de diarização (rótulos de locutor incorretos, fragmentos soltos, texto cortado). Ignore fragmentos sem sentido semântico e interprete o conteúdo da conversa como um todo, sem forçar atribuição perfeita por locutor.
+- Se o responsável por uma tarefa não estiver claro devido a mascaramento ou ambiguidade na transcrição, não adivinhe: descreva a tarefa sem nome de responsável.
+- Não invente informações.
+- Se não houver evidência suficiente, use lista vazia [] nos campos de lista.
+- Use somente as informações presentes na transcrição e nos dados fornecidos.
+- Considere que a transcrição já está anonimizada.
+- Responda em português do Brasil.
+- Devolva APENAS o JSON válido, sem texto antes ou depois, sem markdown, sem ```.
+- risco_churn e evidencias_churn são os dados mais delicados, analise com precisão e apenas insira nessas variáveis informações que sinalizem real intenção de desistência.
+
+Dados e transcrição da reunião:
+
+
+==============================
+        DADOS DA REUNIÃO
+        ==============================
+        ID da reunião: 907223
+        Data da reunião: 2026-01-12 15:00:00
+        Formato da reunião: VIDEO
+        ID status da reunião: 3
+        Status da reunião: COMPLETED
+        Duração da reunião: 00:31:14
+        CODT: TFBER2
+        Tipo de recurso: 
+        Reunião externa: True
+        Data de criação: 2026-01-12 11:17:36
+        Participantes: ['LOCUTOR 42', 'LOCUTOR 34', 'LOCUTOR 9', 'LOCUTOR 26', 'LOCUTOR 8', 'LOCUTOR 2', 'LOCUTOR 28', 'LOCUTOR 23', 'LOCUTOR 12', 'LOCUTOR 1', 'LOCUTOR 46', 'LOCUTOR 25', 'LOCUTOR 5', 'LOCUTOR 18', 'LOCUTOR 19', 'LOCUTOR 13', 'LOCUTOR 35', 'LOCUTOR 16', 'LOCUTOR 21', 'LOCUTOR 10', 'LOCUTOR 14', 'LOCUTOR 15', 'LOCUTOR 44', 'LOCUTOR 7', 'LOCUTOR 17', 'LOCUTOR 6', 'LOCUTOR 36', 'LOCUTOR 33', 'LOCUTOR 3', 'LOCUTOR 11', 'LOCUTOR 24', 'LOCUTOR 22', 'LOCUTOR 20', 'LOCUTOR 4', 'LOCUTOR 27']
+        Quantidade de participantes: 35
+
+        ==============================
+        DADOS DO CLIENTE / UNIDADE
+        ==============================
+        UF: RS
+        CNAE: 4639701
+        Nome da unidade: TOTVS RIO GRANDE DO SUL
+        Segmento: DISTRIBUICAO
+        Faixa de faturamento do cliente: 06.SMB III - De R$ 120.000.001 a R$ 240.000.000
+        Data da última pesquisa: 2024-01
+        Nota NPS: 4 (De 0 a 10)
+
+        ==============================
+        TRANSCRIÇÃO ANONIMIZADA
+        ==============================
+        [PESSOA] da 
+[LOCUTOR 42]: Boa tarde, pessoal.
+[LOCUTOR 34]: Boa tarde, [PESSOA]. Eu até entrei na reunião para tentar entender do que é [LOCAL] da 
+[LOCUTOR 42]: reunião. Ah, bacana, [PESSOA]. Eu até vi o seu e-mail e ia responder agora. Eu estava até falando com... Quem marcou essa reunião com a gente foi o... Elisier. Ele agendou ela com o [PESSOA], do [PESSOA]. Ele já está entrando aí também, tá? Me aguarde só um minutinho que a gente já começa. Aí já te esclare
+[LOCUTOR 9]: direitinho.[PESSOA] da 
+[LOCUTOR 42]: Fala, [PESSOA].
+[LOCUTOR 26]: Boa tarde, pessoal.[PESSOA] da 
+[LOCUTOR 42]: Agora só um minutinho que o [LOCAL] marcou a agenda aqui, ele vai entrar
+[LOCUTOR 26]: também.[PESSOA] da 
+[LOCUTOR 42]: Quem que entrou com essa... como [EMPRESA], consultor de vendas aí? Ô,
+[LOCUTOR 26]: [PESSOA], o [PESSOA] aí é quem?[PESSOA] da 
+[LOCUTOR 42]: [PESSOA], você é da parte de TI, né?
+[LOCUTOR 34]: Eu sou o coordenador de [EMPRESA].[PESSOA] da 
+[LOCUTOR 42]: Ah,
+[LOCUTOR 34]: beleza. Nem tava sabendo [PESSOA] da 
+[LOCUTOR 42]: reunião,
+[LOCUTOR 34]: apareceuGeovane [PESSOA] 
+[LOCUTOR 42]: pra mim. Eu tava aqui com ele, [PESSOA]. O Elisier marcou a reunião com o [PESSOA] [PESSOA]. Eu falei, pô, o [PESSOA] não tá ciente, não? Ele falou assim, ó, era pra tá. Então, beleza, a gente tá guardando aqui na
+[LOCUTOR 34]: sala praGeovane [PESSOA] 
+[LOCUTOR 42]: gente
+[LOCUTOR 26]: começar aqui.
+[LOCUTOR 34]: O próprio [PESSOA] não tá ciente, que foi colocado também, que é o nossoGeovane [PESSOA] 
+[LOCUTOR 42]: diretor. Sério?
+[LOCUTOR 34]: Pode olhar, ele mandou um e-mail questionando o que que seria. Ele perguntou para mim e eu respondi que não sei.[PESSOA] da 
+[LOCUTOR 42]: [LOCUTOR 8]: no
+[LOCUTOR 34]: e-mail aqui. Pelo título ali era... Deixa eu ver aqui. Essa reunião era...[PESSOA] da 
+[LOCUTOR 42]: Na verdade, [PESSOA], só parafraseando aqui a necessidade
+[LOCUTOR 34]: que o Elisier... [LOCAL]?
+[LOCUTOR 26]: ÉGeovane [PESSOA] 
+[LOCUTOR 42]: um acessment. Na verdade, o que que é, tá? O Elisier tinha me chamado,
+[LOCUTOR 34]: meGeovane [PESSOA] 
+[LOCUTOR 42]: procurado. Aqui a gente, nós somos um time de tops performance de gestão, tá? A gente trabalha com a parte de construir as melhores práticas dentro do e ele nos procurou me informando que vocês estavam buscando algumas horas de consultoria e a gente precisava... ele pediu um apoio nosso para fazer um levantamento com vocês sobre, de fato, o que vocês precisam para a gente poder dar andamento nessas demandas com vocês, entendeu?
+[LOCUTOR 34]: Eu acho que era contábil isso.[PESSOA] da 
+[LOCUTOR 42]: [LOCUTOR 2]: contábil? Isso.[PESSOA] da  Deixa eu ver aqui...
+[LOCUTOR 34]: Eu não me engano eraGeovane [PESSOA] 
+[LOCUTOR 42]: contábil. É, parece que ele falou que tinha uma questão contábil fiscal.
+[LOCUTOR 34]: [LOCAL] da 
+[LOCUTOR 42]: Elisir, boa tarde,
+[LOCUTOR 34]: tudo bem?
+[LOCUTOR 28]: Boa
+[LOCUTOR 34]: tarde,
+[LOCUTOR 28]: pessoal.[PESSOA] da 
+[LOCUTOR 42]: Desculpa
+[LOCUTOR 28]: a demora aí, eu tava numa outra agenda com um
+[LOCUTOR 34]: cliente.[PESSOA] da 
+[LOCUTOR 42]: Não, tranquilo. Elisir, é o seguinte, o [PESSOA] não tava ciente da agenda, do objetivo da agenda. Eu nem sei quem que é essa pessoa que entrou aí com o [EMPRESA], consultor de
+[LOCUTOR 28]: vendas? É a inteligência da [EMPRESA], pra fazer um resumo da nossa reunião aqui.
+[LOCUTOR 34]: Ah,[PESSOA] da 
+[LOCUTOR 42]: tá. 
+[LOCUTOR 23]: [PESSOA], tudo bem? Quem pediu essa agenda primeiro foi o [PESSOA]. Ele me solicitado isso o [PESSOA] do
+[LOCUTOR 34]: [PESSOA]
+[LOCUTOR 28]: para a parte de configuração de tributação e o [PESSOA] também fez contato lá com o pessoal da [PESSOA] da [LOCAL] em [LOCAL]. Eu só sei que o [PESSOA] fez contato porque quando eu fui atrás da informação alguém tinha me dito que o [PESSOA] estava tentando buscar essa agenda aí para buscar [LOCAL] da 
+[LOCUTOR 42]: produto.
+[LOCUTOR 28]: Eu falei com o [PESSOA] mais cedo, ele disse que ia estar entrando na reunião. Ele não te falou nada?
+[LOCUTOR 34]: Não. Até o [PESSOA] me questionou o que que era essa reunião e eu falei, cara, a princípio eu não sei, tá o meu nome ali,
+[LOCUTOR 28]: mas eu não... Foi um pedido dele,[PESSOA] da 
+[LOCUTOR 42]: inclusive.
+[LOCUTOR 28]: [LOCUTOR 12]: eu dar uma ligadinha para o [PESSOA] aqui, só um segundo.
+[LOCUTOR 34]: Eu sei que hoje, como a gente tem um escritório de contábil que assumiu, eles estavam com necessidade de algum treinamento. Mas aí...
+[LOCUTOR 28]: É isso aí.
+[LOCUTOR 34]: Pra ter uma reunião sobre isso, eu acho que... Eu particularmente não... É questão mesmo, o valor, hora, dúvida e negociar, né? Não tem muito. Obrigado.
+[LOCUTOR 28]: [PESSOA] está entrando na agenda agora. Eu passei essa demanda para o [PESSOA]. Conforme o [PESSOA] e o [PESSOA] me pediram. E vocês realmente estavam trocando aí a contabilidade que iam precisar desse treinamento. Aí o [PESSOA], conversando com o [PESSOA], ele queria entender melhor a necessidade de vocês, para a gente ver o que de fato a gente vai conseguir entregar para vocês, que não seja só algo tão simplório, né? E se for realmente só uma parte de treinamento também, aí a gente consegue definir aqui nessa reunião e fazer a entregaGeovane [PESSOA] 
+[LOCUTOR 42]: para vocês. Na verdade, assim, o intuito do acesso, deixando claro aí, [PESSOA], é a gente justamente fazer um levantamento de fato que o cliente precisa,
+[LOCUTOR 34]: tá?[PESSOA] da 
+[LOCUTOR 42]: Até porque, até falei com a [LOCAL], a intenção nossa não é simplesmente chegar e, ah, vou te vender X horas. Cara, o objetivo não é isso. O objetivo é a gente vender um serviço que seja aderente à necessidade que você tem. Será que realmente é só contar? Ou será que, olhando no universo um pouquinho mais
+[LOCUTOR 34]: amplo,[PESSOA] da 
+[LOCUTOR 42]: pra gente tentar encaixar qual a melhor
+[LOCUTOR 34]: oferta... O que [PESSOA] da 
+[LOCUTOR 42]: vou dizer?
+[LOCUTOR 34]: Eu trabalho com mentor [PESSOA] da 
+[LOCUTOR 42]: 11
+[LOCUTOR 34]: anos. Então, assim, o que eu vejo é algum setor tem necessidade de treinamento, pessoas novas. Alguns setores já andam sozinhos, tá tudo ok, entendeu? Agora, vai de cada gestor dizer qual é a sua necessidade. Mas eu não posso dizer por eles hoje. Já tivemos consultoria, já tivemos, Tivemos maior edite por três ou quatro anos. Então, a questão hoje que está pegando realmente aqui é mais a contábil, porque a gente tinha pessoas no contábil queGeovane [PESSOA] 
+[LOCUTOR 42]: sa
+[LOCUTOR 1]: e hoje é um escritório externo. [PESSOA] éGeovane [PESSOA] 
+[LOCUTOR 42]: isso.
+[LOCUTOR 28]: Boa tarde,
+[LOCUTOR 34]: [PESSOA].
+[LOCUTOR 46]: Boa tarde,
+[LOCUTOR 26]: pessoal.
+[LOCUTOR 46]: Tudo bem?
+[LOCUTOR 28]: Boa tarde. A gente estava aqui conversando, [PESSOA], que o
+[LOCUTOR 34]: [LOCUTOR 25]: estava passando aí a demanda, disse que até não tinha sido informado da agenda, mas eu só reforcei para ele que foi um pedido teu e do [PESSOA], tá?
+[LOCUTOR 28]: Isso ali entre [LOCAL] e no [LOCAL], lembro que ainda o pessoal havia me acionado para isso. O [PESSOA] é quem vai fazer o levantamento do que a gente vai conseguir atender vocês para poder passar o orçamento e valores de entrega do serviço. Se puder explicar para nós um pouco, detalhar a tua necessidade. para o pessoal poder direcionar.
+[LOCUTOR 46]: Tá bom vamos lá. Eu vi ali que o [PESSOA] já tinha explanado uma parte ali mas [PESSOA] é aquilo que o [PESSOA] falou. Hoje eu entrei na [LOCAL] sem conhecer o entorpe e indo para a parte financeira. E no meio desse ano de 25, houve uma transição onde a [LOCAL] passou a utilizar toda a parte contábil e fiscal sendo feita por terceiros. Antigamente a gente tinha o contador, até a metade do ano a gente tinha uma contadoraGeovane [PESSOA] 
+[LOCUTOR 42]: aqui,
+[LOCUTOR 46]: então ela sabia usar muito bem oGeovane [PESSOA] 
+[LOCUTOR 42]: [LOCAL].
+[LOCUTOR 46]: Porém, com a saída dela e passando essa parte mais contábil para o escritório de contabilidade, eles não têm esse conhecimento sobre o mentor E, no meio disso tudo, nós temos mais a questão de uma reforma tributária e um... um produto de vocês que seria a parte mais de inteligência voltada ali na parte de tributos, que se eu não me engano era a rotina 7.000, inteligência tributária, se eu não me engano. Então a gente queria entender um pouco melhor sobre o produto inteligência tributária e também queríamos, justamente, uma consultoria na parte de contabilidade e fiscal para que a gente possa treinar a equipe externa lá do escritório e, paralelamente a isso, nós temos aqui a assistente contábil, a [PESSOA] e eu que também gostaríamos de ter esse treinamento para entender mais sobre as rotinas e a gente poder ter uma eficiência maior no trabalhoGeovane [PESSOA] 
+[LOCUTOR 42]: com
+[LOCUTOR 46]: o [LOCAL] aí nessa parte contábil eGeovane [PESSOA] 
+[LOCUTOR 42]: fiscal.
+[LOCUTOR 46]: A princípio era isso. [LOCAL],[PESSOA] da 
+[LOCUTOR 42]: [PESSOA]. Será que acaba a gente tentar fazer um assessment mais enxuto só para tentar identificar as necessidades e mapear isso?
+[LOCUTOR 26]: Pode ser. A gente já aproveita. Como é que está a agenda desse pessoal aí para a
+[LOCUTOR 46]: gente
+[LOCUTOR 26]: poder... Porque pelo que eu estou entendendo, [PESSOA], boa tarde, tudo bem,
+[LOCUTOR 46]: né? 
+[LOCUTOR 5]: tarde. A necessidade principal de vocês hoje é ter um treinamento até para a questão da reforma tributária. Pelo que eu estou entendendoGeovane [PESSOA] 
+[LOCUTOR 42]: voc
+[LOCUTOR 18]: não parametrizaram nada ainda não atualizaram. Não tem nada referente à reforma tributáriaGeovane [PESSOA] 
+[LOCUTOR 42]: ainda
+[LOCUTOR 26]: rodando dentro do sistema.
+[LOCUTOR 46]: Não não por enquanto não a única coisa que a gente o que eu estava preocupado era se na virada do ano pudesse travar o nosso faturamento em função de ajustes que a Totos tenha feito dentro do [LOCAL] e a gente não ter parametrizado nada, a gente poderia estar travando o nosso faturamento. Não aconteceu. Bom, agora eu preciso organizar dentro da parte contábil o lançamento correto da tributação e tudo mais, entender melhor, fazer o lançamento correto, as parametrizações ali dentro do sistema e para deixar rodando tudo redondinho.
+[LOCUTOR 26]: [EMPRESA]. Não parou o faturamento porque você faz prorrogou para final de março início de abril. Então eles deram esse prazo para se adequar até eles também se adequarem lá que tinha muitas validações que. estavam parametrizada correta devido à NT deles mas na hora de faturar eles mesmo estavam parando as notas reprovando as notas fiscais dos clientes. Então até para eles se adequarem também e dar
+[LOCUTOR 46]: o prazo
+[LOCUTOR 26]: para o sistema se adequar dentro das normativas deles. Eles aumentaram esse prazo. Então a necessidade do treinamento da reforma tributária pelo que eu
+[LOCUTOR 46]: entendi
+[LOCUTOR 26]: não só o treinamento mas toda a parte de parametrização atualização cadastro de figuras tributárias que é preciso também lá na rotina 4000 de acordo com com a ONCM dos produtos de vocês. Então pode ser que tenha aí um cadastro de cinco a oito figuras tributárias de acordo com o ciclete de cada produto. Mas aí cabe um treinamento uma parametrização dessa onde o consultor na medida do atendimento ele vai explicando para vocês vai demonstrando lá de acordo com a tabela do [LOCAL] a tributação do [EMPRESA] e [EMPRESA] tem redução se não tem. A parte fiscal seria a parte de geração de SPED relatórios alteração de tributos essas coisas.
+[LOCUTOR 46]: é sim seria
+[LOCUTOR 26]: de
+[LOCUTOR 46]: repente
+[LOCUTOR 26]: o humano
+[LOCUTOR 46]: tudo exatamente passar a fazer um passadão geral. Claro que daqui a pouco o [PESSOA] disse assim Olha nós temos esse treinamento aqui a gente começa a evoluir nesse treinamento e tanto da parte da [LOCAL] quanto o nosso escritório de contabilidade. Não essa parte aqui já dominamos tudo mais vamos dar um pouco mais de atenção para uma outra parte que a gente está mais em dúvida tudo mais. Até porque cada um, cada agente que vai participar desses treinamentos pode ter dúvidas diferentes ou ter conhecimentos diferentes, então para alguns, de repente, vai ser mais, vai ser, uma determinada parte vai ser mais importante, para outros, outra parte vai ser mais importante, mas fazer um apanhado geral.
+[LOCUTOR 26]: [LOCAL]. A parte contábil quando você fala da parte contábil para eu entender vocês têm um módulo contábil do [PESSOA] hoje também ou não.
+[LOCUTOR 46]: Cara sendo bem honesto. Eu não tenho, eu não sei como é que funciona,
+[LOCUTOR 34]: se a gente... Temos,
+[LOCUTOR 46]: temos
+[LOCUTOR 34]: cont
+[LOCUTOR 19]: e fiscal.
+[LOCUTOR 26]: Tem o contábil, então teria que ter também, [PESSOA], um treinamento da parte do módulo 21, da parte contábil, dos fechamentos contábeis, integrações, essas
+[LOCUTOR 34]: coisas, né? Eu acho que a [PESSOA] já consegue, já usa isso já.
+[LOCUTOR 26]: A 
+[LOCUTOR 13]: a
+[LOCUTOR 26]: analista
+[LOCUTOR 46]: fiscal de vocês?
+[LOCUTOR 26]: Isso, exato.
+[LOCUTOR 34]: A [PESSOA] fazia e ela já está há um tempo, hoje quem faz é ela.[PESSOA] da 
+[LOCUTOR 42]: Agora tem que ver se estão usando as rotinhas do contábil mesmo,
+[LOCUTOR 26]: né [PESSOA]? É, isso que eu ia perguntar. Por exemplo, a parte de fechamento, as regras contábeis estão todas corretas? Estão tudo ajustadas? Você sabe me dizer, [PESSOA]?
+[LOCUTOR 34]: Corretas eu não consigo
+[LOCUTOR 46]: dizer.
+[LOCUTOR 34]: Sendo usadas e ajustadas porque ela precisa hoje
+[LOCUTOR 26]: sim.
+[LOCUTOR 34]: A gente usa o módulo contábil tem mais de 10 anos.
+[LOCUTOR 26]: Mas nunca teve uma vamos dizer
+[LOCUTOR 34]: um
+[LOCUTOR 26]: treinamento teve uma reciclagem
+[LOCUTOR 34]: teve reciclagem não os quatro anos atrás teve
+[LOCUTOR 46]: treinamento.
+[LOCUTOR 34]: Tem uma pessoa de contábil ficou aqui dentro. Não vou lembrar o nome dele porque ele era da 
+[LOCUTOR 35]: mesmo.
+[LOCUTOR 34]: Não vou lembrar o nome. Ele ficou uma semana
+[LOCUTOR 26]: aqui conosco. Não tranquilo. Eu vou colocar aqui no mapeamento como tendo um treinamento contábil mas se não for necessidade depois é só vocês passarem que não não tem o interesse de fazer a parte desse treinamento. Em relação à parte financeira como que está hoje. Vocês fazem pagamentos hoje manuais geram um arquivo lá o arquivo magnético magnético para fazer esses
+[LOCUTOR 46]: pagamentos.
+[LOCUTOR 26]: Como que está aí essa parte financeira hoje
+[LOCUTOR 46]: o
+[LOCUTOR 34]: [PESSOA].
+[LOCUTOR 46]: Na verdade, a parte financeira hoje até funciona muito
+[LOCUTOR 26]: bem.
+[LOCUTOR 46]: A questão seria muito mais de apresentar ferramentas que a gente não utiliza para gerar um processo mais ágil aqui
+[LOCUTOR 34]: dentro.
+[LOCUTOR 46]: Por exemplo, hoje a gente não utiliza a conciliação bancária, por exemplo.
+[LOCUTOR 26]: 604? Como? 604?
+[LOCUTOR 46]: É, a gente usa 604, mas a gente não usa o arquivo para fazer a conciliação, por
+[LOCUTOR 34]: exemplo.
+[LOCUTOR 26]: Ou da 643,
+[LOCUTOR 46]: né? Isso, acho que 
+[LOCUTOR 16]: 643. 643,
+[LOCUTOR 34]: isso.
+[LOCUTOR 46]: Então, coisas assim que a gente poderia, daqui a pouco, a própria TOTOS está nos mostrando algumas coisas de ferramentas que a gente não tenha hoje contratado, dizendo, ó, isso aqui seria interessante para vocês, isso aqui seria interessante para vocês. É aquele negócio, como eu não tenho hoje uma vitrine da TOTOS para entender
+[LOCUTOR 34]: o que
+[LOCUTOR 46]: de produto vocês têm à venda, têm a oferecer para nós, e que possa justamente ajudar o nosso dia a dia
+[LOCUTOR 26]: aqui. [EMPRESA]. Eu tenho um mapeamento aqui, como o [PESSOA] falou, a gente trabalha num departamento aqui que é o [LOCAL], que é o [EMPRESA]. Então o intuito nosso dessa consultoria é sempre trazer novidades para o cliente. Então sempre que tem algum lançamento de processos internos o verbo multifilial é um processo hoje que vários clientes vão utilizar. Então quando sai esses processos novos dentro do [LOCAL] a gente costuma já apresentar para os clientes que hoje tem contrato com a gente na consultoria. Então devido a grande demanda de de acesso. Eu faço acesso hoje tanto esse online que a gente está batendo esse papo quanto presencial em cliente. eu criei um checklist, onde ele traz os principais processos que os clientes deveriam ter, que hoje eles não têm. Então, com esse checklist, eu consigo, por exemplo, demonstrar isso que você está me
+[LOCUTOR 46]: pedindo.
+[LOCUTOR 26]: [PESSOA],
+[LOCUTOR 46]: hoje
+[LOCUTOR 26]: eu não conhecia do processo, por exemplo, do [PESSOA], do [PESSOA]. Então, a gente consegue mapear
+[LOCUTOR 46]: isso
+[LOCUTOR 26]: e depois fazer um projeto para você de um contrato de horas de
+[LOCUTOR 46]: consultoria
+[LOCUTOR 26]: dentro daquilo que você vai realmente necessitar entendeu. Então a gente já levantou o módulo fiscal o módulo da reforma tributária e as outras aqui e a gente consegue fazer esse levantamento agora. Posso fazer esse checklist com vocês aqui rapidinho, porque aí a gente já vai ter esses insumos que você tá me
+[LOCUTOR 46]: pedindo. Tá, eu vou precisar que o [PESSOA] me ajude, porque o [PESSOA] tem muito
+[LOCUTOR 26]: mais conhecimento,
+[LOCUTOR 46]: tem determinado...
+[LOCUTOR 34]: Mas o que seria, deixa eu entender, eu tava com outra pessoa falando no meu ouvido que
+[LOCUTOR 46]: eu não...
+[LOCUTOR 26]: Não, tranquilo, você sabe, você vai entender bem. Lá no [LOCAL], você falou que já teve o [LOCAL],
+[LOCUTOR 34]: né?
+[LOCUTOR 46]: Sim.
+[LOCUTOR 26]: Aí lá no [LOCAL] ele não trazia para você lá na aba da gestão o percentual de utilização do
+[LOCUTOR 46]: sistema.
+[LOCUTOR 34]: Sim a gente chegou a 64
+[LOCUTOR 46]: por
+[LOCUTOR 26]: cento. Exato aquilo lá seria
+[LOCUTOR 34]: [PESSOA] aquilo que o fiscal usava
+[LOCUTOR 46]: 100 por
+[LOCUTOR 26]: cento. Então é isso aí. [PESSOA] 
+[LOCUTOR 21]: aquilo lá.
+[LOCUTOR 26]: Só que eu faço esse checklist devido com
+[LOCUTOR 46]: a
+[LOCUTOR 26]: fazendo o par
+[LOCUTOR 10]: de
+[LOCUTOR 26]: mais de 100 clientes que eu j
+[LOCUTOR 14]: atendi
+[LOCUTOR 26]: em Assessments e mais de 200 clientes em
+[LOCUTOR 46]: consultoria.
+[LOCUTOR 34]: Então,
+[LOCUTOR 26]: sempre nesses atendimentos, nesses
+[LOCUTOR 46]: Assessments,
+[LOCUTOR 26]: eu via que tem processos hoje que os clientes deveriam
+[LOCUTOR 46]: ter,
+[LOCUTOR 26]: que é comum para todos os clientes, independente do segmento. Porém, eles não rodam esses
+[LOCUTOR 46]: processos.
+[LOCUTOR 26]: Então às vezes é um processo que dá um ganho de agilidade ali dentro da parte financeira da parte de compras que o cliente não utiliza e fica fazendo de forma manual. Então esse checklist eu vou fazendo as perguntas vocês me falam se utiliza o processo da rotina tal ou
+[LOCUTOR 46]: não.
+[LOCUTOR 26]: E aí eu consigo dar esse
+[LOCUTOR 46]: sumo que
+[LOCUTOR 26]: o [PESSOA] está me
+[LOCUTOR 46]: pedindo.
+[LOCUTOR 26]: Fala hoje você não utiliza [PESSOA] aí no seu departamento [PESSOA] o processo do [LOCAL]. Mas a gente consegue parametrizar e se te entregar em consultoria. Você tem o processo de sendo discursor no sistema que você não utiliza? Tem interesse de
+[LOCUTOR 34]: utilizar? Mas isso teria que ter a equipe toda junto para a gente validar o que é usado ou não usado.
+[LOCUTOR 46]: Por exemplo,
+[LOCUTOR 34]: eu sou de TI. Eu por estar aqui há bastante tempo eu conheço algumas rotinas. Então mas eu por exemplo hoje não consigo dizer nos outros setores que cada um usa e quanto usa entendeu.
+[LOCUTOR 46]: [LOCUTOR 15]: entendi e nem o [PESSOA] vai conseguir dizer também
+[LOCUTOR 34]: porque o setor deles são quatro ou cinco pessoas e cada uma é responsável por uma
+[LOCUTOR 26]: área.
+[LOCUTOR 34]: Aquela pessoa domina as rotinas
+[LOCUTOR 46]: dela
+[LOCUTOR 34]: do dia a dia dela ali mas o [PESSOA] não vai saber te dizer qual rotina que é. [EMPRESA].
+[LOCUTOR 26]: [PESSOA], você acha que, não sei, a gente marcaria um outro momento e vinha esse
+[LOCUTOR 46]: pessoal,
+[LOCUTOR 26]: ou a gente enviaria pra ele esse checklist e eles
+[LOCUTOR 34]: receberiam
+[LOCUTOR 26]: e devolveriam? É mais fácil a
+[LOCUTOR 34]: gente receber
+[LOCUTOR 46]: o checklist.[PESSOA] da 
+[LOCUTOR 42]: É, acho que enviar o checklist, porque hoje é complicado pra reunir esse pessoal,
+[LOCUTOR 34]: [PESSOA]. É, hoje 
+[LOCUTOR 21]: segundo.[PESSOA] da 
+[LOCUTOR 42]: Não, eu digo hoje assim, no sentido, é difícil marcar uma data pra reunir esse pessoal pra gente fazer esse levantamento ou você prefere o envio do
+[LOCUTOR 34]: checklist? É, eu acho que o checklist tem algumas áreas ali, por exemplo, principalmente no [PESSOA], que eu não consigo parar a pessoa.
+[LOCUTOR 46]: Exatamente. Exatamente.
+[LOCUTOR 34]: 
+[LOCUTOR 44]: muito difícil conseguir parar. É muito difícil,
+[LOCUTOR 26]: claro. Porque assim, o 
+[LOCUTOR 7]: e
+[LOCUTOR 26]: o [PESSOA],
+[LOCUTOR 34]: dentro
+[LOCUTOR 26]: do... Não, imagina, ainda mais energiando,
+[LOCUTOR 46]: né?
+[LOCUTOR 34]: Porque assim, dentro do... A maioria das equipes estão com pessoas de férias,
+[LOCUTOR 46]: entendeu?
+[LOCUTOR 26]: é complicado
+[LOCUTOR 46]: mesmo,
+[LOCUTOR 26]: porque dentro do checklist, por exemplo, eu tenho processos
+[LOCUTOR 46]: lá
+[LOCUTOR 26]: e dentro daquilo que vocês marcarem lá de sim
+[LOCUTOR 46]: ou não,
+[LOCUTOR 26]: a gente consegue fazer um levantamento
+[LOCUTOR 34]: de
+[LOCUTOR 26]: processos que você n
+[LOCUTOR 17]: tem
+[LOCUTOR 26]: e vocês, através do contrato das consultorias, ele consegue entregar para vocês, consultor, consegue implementar esse processo e fazer toda
+[LOCUTOR 46]: a parte
+[LOCUTOR 26]: de implementação, treinamento e entregar o processo rodando para vocês,
+[LOCUTOR 46]: entendeu?
+[LOCUTOR 34]: Não, através do checklist a gente pega ali, ó,
+[LOCUTOR 46]: fulano,
+[LOCUTOR 34]: separa 10 minutos aí, olha isso
+[LOCUTOR 46]: aqui,
+[LOCUTOR 26]: me
+[LOCUTOR 34]: diz o que que tu usa e o que que tu
+[LOCUTOR 46]: não usa hoje. Exatamente, acho que fica mais fácil pra nós.
+[LOCUTOR 26]: Por exemplo, hoje vocês trabalham com o processo de pague fora aí? Que é o processo de gerar arquivos para
+[LOCUTOR 34]: pagamentos?
+[LOCUTOR 26]: Que é o [EMPRESA] também, conhecido como [EMPRESA]?
+[LOCUTOR 46]: E na verdade na verdade eu não sei eu eu a gente testou um PIX cobrança mas é outra coisa
+[LOCUTOR 26]: né. É outra
+[LOCUTOR 46]: coisa.
+[LOCUTOR 26]: [LOCUTOR 6]: é o seguinte exemplo você tem os pagamentos que você faz para fornecedores [EMPRESA] outras pessoas
+[LOCUTOR 34]: pagamentos
+[LOCUTOR 26]: mesmo. Ele aí no processo do sistema hoje tem como você gerar um arquivo de pagamento. Então ao invés do [PESSOA] seu ir lá no [LOCAL] e ficar pagando t
+[LOCUTOR 36]: a
+[LOCUTOR 26]: título ele gera um arquivo com todos esses
+[LOCUTOR 34]: pagamentos.
+[LOCUTOR 26]: Sobe lá no [LOCAL] do banco. O banco faz esses pagamentos retorna esse arquivo para vocês. Aí pega esse arquivo processa no sistema e automaticamente ele já baixa todos os títulos que estavam naquele arquivo. Esse é o processador [EMPRESA] que a gente chama também de [EMPRESA] ou
+[LOCUTOR 34]: [LOCAL]. Isso
+[LOCUTOR 26]: então ele é um processador que dá um ganho de agilidade muito grande dentro do processo [PESSOA] porque normalmente vamos pegar aí segunda-feira tem seu [PESSOA] tem títulos que venceu o sábado venceu o domingo e está vencendo na segunda. Então normalmente o que eles fazem lá no [LOCAL] e fica lá título a título fazendo esses pagamentos
+[LOCUTOR 34]: lá.
+[LOCUTOR 26]: Então com o arquivo ele dá um ganho de agilidade no processo do [PESSOA] do contas a pagar no caso.
+[LOCUTOR 34]: Sim.
+[LOCUTOR 26]: Mas tranquilo, então, aí eu vou organizar
+[LOCUTOR 46]: aqui
+[LOCUTOR 26]: o checklist, porque ele tem muita informação, eu vou enxugar o máximo de informação possível aqui. Deixa eu compartilhar a tela aqui, [PESSOA], só para você ver, que aí lá na hora que você for falar com o
+[LOCUTOR 46]: pessoal,
+[LOCUTOR 26]: aí você vai marcar só para mim, só essa parte de [PESSOA]
+[LOCUTOR 33]: aqui. Está
+[LOCUTOR 26]: vendo esse campo aqui, a aderência? só sim
+[LOCUTOR 46]: ou n
+[LOCUTOR 3]: esse trabalho com ficha
+[LOCUTOR 46]: sim
+[LOCUTOR 26]: sugestão de compra de sistema não já tem um giro customizado não trabalho
+[LOCUTOR 46]: com
+[LOCUTOR 26]: política comercial produto fornecedor não sim aí às vezes por exemplo deixa eu pegar uma
+[LOCUTOR 34]: aqui
+[LOCUTOR 46]: e
+[LOCUTOR 26]: aqui no [PESSOA]
+[LOCUTOR 46]: boletins Aqui,
+[LOCUTOR 26]: Bolepix, aqui é o [EMPRESA]. Ah, não trabalho com o [EMPRESA], trabalho com o da [LOCAL], por exemplo. Você coloca aqui outros, aí na frente você coloca para a minha
+[LOCUTOR 46]: [LOCAL].
+[LOCUTOR 26]: para eu saber porque isso que 
+[LOCUTOR 21]: importante
+[LOCUTOR 26]: até para a gente entender porque que por exemplo hoje eu tenho o da todos
+[LOCUTOR 34]: e
+[LOCUTOR 26]: trabalho com um terceiro por causa do preço porque o processo está mais maduro. Então isso que é até importante tanto para a gente interna para a parte comercial. Depois ter essa informação e poder estruturar uma forma de entregar um serviço melhor para vocês também est
+[LOCUTOR 11]: ok.
+[LOCUTOR 26]: Aí tem toda a parte financeira aqui. Aí a gente entra na parte de compras tem verbas de crédito ICA venda meta política comercial campanha de desconto tudo. Aí às vezes aqui na parte de baixo tem alguma coisa validando medicamento [LOCAL] importação WMS se não tiver não precisa preencher pode passar batido por elas beleza.
+[LOCUTOR 46]: [LOCAL].
+[LOCUTOR 26]: Eu vou organizar o documento aqui, aí eu passo para o [PESSOA] e você encaminha para eles, né, [PESSOA] da 
+[LOCUTOR 42]: [LOCAL] sim.
+[LOCUTOR 26]: Tá,[PESSOA] da 
+[LOCUTOR 42]: beleza.
+[LOCUTOR 26]: Mais alguma coisa, pessoal?
+[LOCUTOR 46]: Não, na verdade, é isso aí. A gente fazer esse levantamento de possíveis demandas aí e a segunda coisa é fazer
+[LOCUTOR 28]: um orçamento
+[LOCUTOR 46]: para a gente ter esse treinamento cont
+[LOCUTOR 24]: e
+[LOCUTOR 46]: fiscal.
+[LOCUTOR 26]: [LOCAL], eu vou já organizar esse documento aqui, vou encaminhar para o [PESSOA], aí assim, [PESSOA] e [PESSOA], o que que eu vou trazer
+[LOCUTOR 28]: para vocês?
+[LOCUTOR 26]: O quanto mais rápido vocês conseguirem trazer esse checklist, retornar esse para a gente melhor porque porque apesar da reforma tributária ela ainda ser validada só a partir de
+[LOCUTOR 34]: mar
+[LOCUTOR 22]: ela tem dado
+[LOCUTOR 28]: algumas
+[LOCUTOR 26]: algumas intercorrências em aprovações de nota fiscal.
+[LOCUTOR 28]: Ent
+[LOCUTOR 20]: assim e
+[LOCUTOR 28]: n
+[LOCUTOR 3]: por parte da própria [LOCAL] é por parte da própria [LOCAL] que 
+[LOCUTOR 4]: igual falei
+[LOCUTOR 26]: lá no início da nossa reunião. Eles mesmo trazem lá na NT deles que é a forma de tributar o produto é daquele jeito só que na hora de faturar dá algum erro lá e aí às vezes o consultor tem que entrar e fazer os ajustes para aprovar essa nota fiscal. Por que eu estou dizendo isso para
+[LOCUTOR 28]: n
+[LOCUTOR 20]: deixar o mais próximo possível lá para o mês de fevereiro que a gente sabe que tem carnaval e isso vai enrolar um pouco. e não deixar o mais
+[LOCUTOR 28]: próximo
+[LOCUTOR 26]: poss
+[LOCUTOR 27]: para
+[LOCUTOR 26]: março,
+[LOCUTOR 28]: porque
+[LOCUTOR 26]: senão, a partir de março, vai realmente travar e não vai conseguir faturar se não tiver com essas informações cadastradas da reforma
+[LOCUTOR 46]: tributária. E
+[LOCUTOR 26]: aí a gente está falando de todos os processos da empresa. Exemplo, entrada de mercadoria hoje, ela tem que ser única ou exclusivamente por importação de XML. Não pode mais fazer essas entradas manuais, como os clientes normalmente fazem. Por quê? Porque os dados do [EMPRESA] e [EMPRESA] vão vir da nota fiscal do seu
+[LOCUTOR 28]: fornecedor
+[LOCUTOR 26]: e elas
+[LOCUTOR 28]: est
+[LOCUTOR 20]: somente no XML. Já é importação de
+[LOCUTOR 28]: XML? Sim.
+[LOCUTOR 26]: Então vocês não vão ter problema
+[LOCUTOR 28]: nessa
+[LOCUTOR 26]: parte. E aí a
+[LOCUTOR 28]: gente vai
+[LOCUTOR 26]: precisar
+[LOCUTOR 28]: atualizar
+[LOCUTOR 26]: a rotina. Hoje já está na versão 37,
+[LOCUTOR 34]: [PESSOA], seu Winthorne? Maioria. É que não tem todas ainda,
+[LOCUTOR 28]: né?
+[LOCUTOR 26]: É mas aí tem algumas
+[LOCUTOR 28]: que s
+[LOCUTOR 20]: as principais que o consultor vai demonstrar para vocês que é preciso estar na versão
+[LOCUTOR 28]: 37
+[LOCUTOR 26]: para validar as questões da reforma tributária assim como
+[LOCUTOR 46]: o
+[LOCUTOR 26]: DOC fiscal também tem uma
+[LOCUTOR 28]: vers
+[LOCUTOR 20]: a última versão dele que é preciso atualizar para contemplar essas questões da reforma
+[LOCUTOR 34]: tributária. Ent
+[LOCUTOR 20]: só
+[LOCUTOR 34]: tem que analisar assim como são para só confirmar mas eu
+[LOCUTOR 26]: vou sempre
+[LOCUTOR 34]: ter
+[LOCUTOR 26]: calde também. Vocês têm
+[LOCUTOR 28]: ou não.
+[LOCUTOR 26]: Não, só a venda normal 316, fatura cargo, o balcão, o balc
+[LOCUTOR 17]: reserva. Não tem
+[LOCUTOR 46]: balc
+[LOCUTOR 20]: também.
+[LOCUTOR 34]: Só a força de venda e
+[LOCUTOR 46]: 316.
+[LOCUTOR 26]: Telemarket, né? Monta a carga e faz as
+[LOCUTOR 34]: entregas.
+[LOCUTOR 26]: Isso. Show. Não, beleza. Então da minha parte é isso,
+[LOCUTOR 46]: pessoal.
+[LOCUTOR 26]: Se vocês tiverem mais algum assunto pra gente poder falar. Quer falar alguma
+[LOCUTOR 28]: coisa, [PESSOA] da 
+[LOCUTOR 42]: Bom, Elisir, só mais a questão desse levantamento que eles vão responder pra gente e vai ser essencial até pra gente ver a quantidade de hora que a gente conseguir adequar melhor contigo aí, qual a melhor oferta pra passar
+[LOCUTOR 28]: aí pro cliente. [PESSOA]. Eu fico, então, nesse aguardo do [PESSOA] e do [PESSOA] para a gente poder quantificar
+[LOCUTOR 34]: isso.
+[LOCUTOR 28]: E, [PESSOA], de novo, a ideia aqui é só para a gente entender o que faz mais sentido. Se é eu te vender algumas horas que não vai te atender, talvez em outras demandas, ou se a gente faz algo que seja mais direcionado, mais completo para atender vocês com o menor [PESSOA] da 
+[LOCUTOR 42]: possível. E aquela questão, né, [LOCAL], o intuito nosso não é vender, simplesmente vou vender um pacote de horas. A gente quer atender a uma necessidade. Vou vender um pacote de horas X, cara, talvez seja grande demais para o cliente, o cliente não tem necessidade daquele pacote. Ou talvez vender um pacote pequeno demais, com uma quantidade de muitas ações, a gente conseguir não atender também. Então,
+[LOCUTOR 46]: a gente [EMPRESA] [PESSOA] 
+[LOCUTOR 42]: ao máximo adequar horas versus necessidade e oferecer a melhor oferta.
+[LOCUTOR 28]: [LOCAL]?
+[LOCUTOR 46]: [LOCAL],
+[LOCUTOR 28]: perfeito. Eu só fico no aguardo de vocês assim que eu enviar para vocês aí a planilha, vocês me responderem o mais rápido possível para a gente já dar andamento noGeovane [PESSOA] 
+[LOCUTOR 42]: processo. [LOCAL], o [PESSOA] me passando aqui, eu já disparo o e-mail para todos os envolventes na agenda, tá?
+[LOCUTOR 46]: Tá, e daí a gente já tenta agilizar isso aí para fazer a devolutiva
+[LOCUTOR 34]: [PESSOA] da 
+[LOCUTOR 42]: planilha.
+[LOCUTOR 26]: [LOCAL].
+[LOCUTOR 34]: [LOCAL]. Tá
+[LOCUTOR 28]: certo.
+[LOCUTOR 26]: Obrigado, pessoal. [LOCAL],
+[LOCUTOR 46]: pessoal.[PESSOA] da 
+[LOCUTOR 42]: Obrigado,
+[LOCUTOR 26]: boa semana.
+[LOCUTOR 46]: [LOCAL],
+[LOCUTOR 26]: obrigado, até mais. Tchau. Vai terGeovane [PESSOA] 
+[LOCUTOR 42]: que sair.
+
+
+{'ID': '907223', 'Data': '2026-01-12 15:00:00', 'Formato da reunião': 'VIDEO', 'ID status da reunião': '3', 'Status': 'COMPLETED', 'Duração': '00:31:14', 'CODT': 'TFBER2', 'Tipo de recurso': '', 'Reunião externa': True, 'Data de criação': '2026-01-12 11:17:36', 'UF': 'RS', 'CNAE': '4639701', 'Nome da unidade': 'TOTVS RIO GRANDE DO SUL', 'Segmento': 'DISTRIBUICAO', 'Faixa de faturamento do cliente': '06.SMB III - De R$ 120.000.001 a R$ 240.000.000', 'Data da última pesquisa': '2024-01', 'Nota NPS': '4', 'Transcrição': '[PESSOA] da \n[LOCUTOR 42]: Boa tarde, pessoal.\n[LOCUTOR 34]: Boa tarde, [PESSOA]. Eu até entrei na reunião para tentar entender do que é [LOCAL] da \n[LOCUTOR 42]: reunião. Ah, bacana, [PESSOA]. Eu até vi o seu e-mail e ia responder agora. Eu estava até falando com... Quem marcou essa reunião com a gente foi o... Elisier. Ele agendou ela com o [PESSOA], do [PESSOA]. Ele já está entrando aí também, tá? Me aguarde só um minutinho que a gente já começa. Aí já te esclare\n[LOCUTOR 9]: direitinho.[PESSOA] da \n[LOCUTOR 42]: Fala, [PESSOA].\n[LOCUTOR 26]: Boa tarde, pessoal.[PESSOA] da \n[LOCUTOR 42]: Agora só um minutinho que o [LOCAL] marcou a agenda aqui, ele vai entrar\n[LOCUTOR 26]: também.[PESSOA] da \n[LOCUTOR 42]: Quem que entrou com essa... como [EMPRESA], consultor de vendas aí? Ô,\n[LOCUTOR 26]: [PESSOA], o [PESSOA] aí é quem?[PESSOA] da \n[LOCUTOR 42]: [PESSOA], você é da parte de TI, né?\n[LOCUTOR 34]: Eu sou o coordenador de [EMPRESA].[PESSOA] da \n[LOCUTOR 42]: Ah,\n[LOCUTOR 34]: beleza. Nem tava sabendo [PESSOA] da \n[LOCUTOR 42]: reunião,\n[LOCUTOR 34]: apareceuGeovane [PESSOA] \n[LOCUTOR 42]: pra mim. Eu tava aqui com ele, [PESSOA]. O Elisier marcou a reunião com o [PESSOA] [PESSOA]. Eu falei, pô, o [PESSOA] não tá ciente, não? Ele falou assim, ó, era pra tá. Então, beleza, a gente tá guardando aqui na\n[LOCUTOR 34]: sala praGeovane [PESSOA] \n[LOCUTOR 42]: gente\n[LOCUTOR 26]: começar aqui.\n[LOCUTOR 34]: O próprio [PESSOA] não tá ciente, que foi colocado também, que é o nossoGeovane [PESSOA] \n[LOCUTOR 42]: diretor. Sério?\n[LOCUTOR 34]: Pode olhar, ele mandou um e-mail questionando o que que seria. Ele perguntou para mim e eu respondi que não sei.[PESSOA] da \n[LOCUTOR 42]: [LOCUTOR 8]: no\n[LOCUTOR 34]: e-mail aqui. Pelo título ali era... Deixa eu ver aqui. Essa reunião era...[PESSOA] da \n[LOCUTOR 42]: Na verdade, [PESSOA], só parafraseando aqui a necessidade\n[LOCUTOR 34]: que o Elisier... [LOCAL]?\n[LOCUTOR 26]: ÉGeovane [PESSOA] \n[LOCUTOR 42]: um acessment. Na verdade, o que que é, tá? O Elisier tinha me chamado,\n[LOCUTOR 34]: meGeovane [PESSOA] \n[LOCUTOR 42]: procurado. Aqui a gente, nós somos um time de tops performance de gestão, tá? A gente trabalha com a parte de construir as melhores práticas dentro do e ele nos procurou me informando que vocês estavam buscando algumas horas de consultoria e a gente precisava... ele pediu um apoio nosso para fazer um levantamento com vocês sobre, de fato, o que vocês precisam para a gente poder dar andamento nessas demandas com vocês, entendeu?\n[LOCUTOR 34]: Eu acho que era contábil isso.[PESSOA] da \n[LOCUTOR 42]: [LOCUTOR 2]: contábil? Isso.[PESSOA] da  Deixa eu ver aqui...\n[LOCUTOR 34]: Eu não me engano eraGeovane [PESSOA] \n[LOCUTOR 42]: contábil. É, parece que ele falou que tinha uma questão contábil fiscal.\n[LOCUTOR 34]: [LOCAL] da \n[LOCUTOR 42]: Elisir, boa tarde,\n[LOCUTOR 34]: tudo bem?\n[LOCUTOR 28]: Boa\n[LOCUTOR 34]: tarde,\n[LOCUTOR 28]: pessoal.[PESSOA] da \n[LOCUTOR 42]: Desculpa\n[LOCUTOR 28]: a demora aí, eu tava numa outra agenda com um\n[LOCUTOR 34]: cliente.[PESSOA] da \n[LOCUTOR 42]: Não, tranquilo. Elisir, é o seguinte, o [PESSOA] não tava ciente da agenda, do objetivo da agenda. Eu nem sei quem que é essa pessoa que entrou aí com o [EMPRESA], consultor de\n[LOCUTOR 28]: vendas? É a inteligência da [EMPRESA], pra fazer um resumo da nossa reunião aqui.\n[LOCUTOR 34]: Ah,[PESSOA] da \n[LOCUTOR 42]: tá. \n[LOCUTOR 23]: [PESSOA], tudo bem? Quem pediu essa agenda primeiro foi o [PESSOA]. Ele me solicitado isso o [PESSOA] do\n[LOCUTOR 34]: [PESSOA]\n[LOCUTOR 28]: para a parte de configuração de tributação e o [PESSOA] também fez contato lá com o pessoal da [PESSOA] da [LOCAL] em [LOCAL]. Eu só sei que o [PESSOA] fez contato porque quando eu fui atrás da informação alguém tinha me dito que o [PESSOA] estava tentando buscar essa agenda aí para buscar [LOCAL] da \n[LOCUTOR 42]: produto.\n[LOCUTOR 28]: Eu falei com o [PESSOA] mais cedo, ele disse que ia estar entrando na reunião. Ele não te falou nada?\n[LOCUTOR 34]: Não. Até o [PESSOA] me questionou o que que era essa reunião e eu falei, cara, a princípio eu não sei, tá o meu nome ali,\n[LOCUTOR 28]: mas eu não... Foi um pedido dele,[PESSOA] da \n[LOCUTOR 42]: inclusive.\n[LOCUTOR 28]: [LOCUTOR 12]: eu dar uma ligadinha para o [PESSOA] aqui, só um segundo.\n[LOCUTOR 34]: Eu sei que hoje, como a gente tem um escritório de contábil que assumiu, eles estavam com necessidade de algum treinamento. Mas aí...\n[LOCUTOR 28]: É isso aí.\n[LOCUTOR 34]: Pra ter uma reunião sobre isso, eu acho que... Eu particularmente não... É questão mesmo, o valor, hora, dúvida e negociar, né? Não tem muito. Obrigado.\n[LOCUTOR 28]: [PESSOA] está entrando na agenda agora. Eu passei essa demanda para o [PESSOA]. Conforme o [PESSOA] e o [PESSOA] me pediram. E vocês realmente estavam trocando aí a contabilidade que iam precisar desse treinamento. Aí o [PESSOA], conversando com o [PESSOA], ele queria entender melhor a necessidade de vocês, para a gente ver o que de fato a gente vai conseguir entregar para vocês, que não seja só algo tão simplório, né? E se for realmente só uma parte de treinamento também, aí a gente consegue definir aqui nessa reunião e fazer a entregaGeovane [PESSOA] \n[LOCUTOR 42]: para vocês. Na verdade, assim, o intuito do acesso, deixando claro aí, [PESSOA], é a gente justamente fazer um levantamento de fato que o cliente precisa,\n[LOCUTOR 34]: tá?[PESSOA] da \n[LOCUTOR 42]: Até porque, até falei com a [LOCAL], a intenção nossa não é simplesmente chegar e, ah, vou te vender X horas. Cara, o objetivo não é isso. O objetivo é a gente vender um serviço que seja aderente à necessidade que você tem. Será que realmente é só contar? Ou será que, olhando no universo um pouquinho mais\n[LOCUTOR 34]: amplo,[PESSOA] da \n[LOCUTOR 42]: pra gente tentar encaixar qual a melhor\n[LOCUTOR 34]: oferta... O que [PESSOA] da \n[LOCUTOR 42]: vou dizer?\n[LOCUTOR 34]: Eu trabalho com mentor [PESSOA] da \n[LOCUTOR 42]: 11\n[LOCUTOR 34]: anos. Então, assim, o que eu vejo é algum setor tem necessidade de treinamento, pessoas novas. Alguns setores já andam sozinhos, tá tudo ok, entendeu? Agora, vai de cada gestor dizer qual é a sua necessidade. Mas eu não posso dizer por eles hoje. Já tivemos consultoria, já tivemos, Tivemos maior edite por três ou quatro anos. Então, a questão hoje que está pegando realmente aqui é mais a contábil, porque a gente tinha pessoas no contábil queGeovane [PESSOA] \n[LOCUTOR 42]: sa\n[LOCUTOR 1]: e hoje é um escritório externo. [PESSOA] éGeovane [PESSOA] \n[LOCUTOR 42]: isso.\n[LOCUTOR 28]: Boa tarde,\n[LOCUTOR 34]: [PESSOA].\n[LOCUTOR 46]: Boa tarde,\n[LOCUTOR 26]: pessoal.\n[LOCUTOR 46]: Tudo bem?\n[LOCUTOR 28]: Boa tarde. A gente estava aqui conversando, [PESSOA], que o\n[LOCUTOR 34]: [LOCUTOR 25]: estava passando aí a demanda, disse que até não tinha sido informado da agenda, mas eu só reforcei para ele que foi um pedido teu e do [PESSOA], tá?\n[LOCUTOR 28]: Isso ali entre [LOCAL] e no [LOCAL], lembro que ainda o pessoal havia me acionado para isso. O [PESSOA] é quem vai fazer o levantamento do que a gente vai conseguir atender vocês para poder passar o orçamento e valores de entrega do serviço. Se puder explicar para nós um pouco, detalhar a tua necessidade. para o pessoal poder direcionar.\n[LOCUTOR 46]: Tá bom vamos lá. Eu vi ali que o [PESSOA] já tinha explanado uma parte ali mas [PESSOA] é aquilo que o [PESSOA] falou. Hoje eu entrei na [LOCAL] sem conhecer o entorpe e indo para a parte financeira. E no meio desse ano de 25, houve uma transição onde a [LOCAL] passou a utilizar toda a parte contábil e fiscal sendo feita por terceiros. Antigamente a gente tinha o contador, até a metade do ano a gente tinha uma contadoraGeovane [PESSOA] \n[LOCUTOR 42]: aqui,\n[LOCUTOR 46]: então ela sabia usar muito bem oGeovane [PESSOA] \n[LOCUTOR 42]: [LOCAL].\n[LOCUTOR 46]: Porém, com a saída dela e passando essa parte mais contábil para o escritório de contabilidade, eles não têm esse conhecimento sobre o mentor E, no meio disso tudo, nós temos mais a questão de uma reforma tributária e um... um produto de vocês que seria a parte mais de inteligência voltada ali na parte de tributos, que se eu não me engano era a rotina 7.000, inteligência tributária, se eu não me engano. Então a gente queria entender um pouco melhor sobre o produto inteligência tributária e também queríamos, justamente, uma consultoria na parte de contabilidade e fiscal para que a gente possa treinar a equipe externa lá do escritório e, paralelamente a isso, nós temos aqui a assistente contábil, a [PESSOA] e eu que também gostaríamos de ter esse treinamento para entender mais sobre as rotinas e a gente poder ter uma eficiência maior no trabalhoGeovane [PESSOA] \n[LOCUTOR 42]: com\n[LOCUTOR 46]: o [LOCAL] aí nessa parte contábil eGeovane [PESSOA] \n[LOCUTOR 42]: fiscal.\n[LOCUTOR 46]: A princípio era isso. [LOCAL],[PESSOA] da \n[LOCUTOR 42]: [PESSOA]. Será que acaba a gente tentar fazer um assessment mais enxuto só para tentar identificar as necessidades e mapear isso?\n[LOCUTOR 26]: Pode ser. A gente já aproveita. Como é que está a agenda desse pessoal aí para a\n[LOCUTOR 46]: gente\n[LOCUTOR 26]: poder... Porque pelo que eu estou entendendo, [PESSOA], boa tarde, tudo bem,\n[LOCUTOR 46]: né? \n[LOCUTOR 5]: tarde. A necessidade principal de vocês hoje é ter um treinamento até para a questão da reforma tributária. Pelo que eu estou entendendoGeovane [PESSOA] \n[LOCUTOR 42]: voc\n[LOCUTOR 18]: não parametrizaram nada ainda não atualizaram. Não tem nada referente à reforma tributáriaGeovane [PESSOA] \n[LOCUTOR 42]: ainda\n[LOCUTOR 26]: rodando dentro do sistema.\n[LOCUTOR 46]: Não não por enquanto não a única coisa que a gente o que eu estava preocupado era se na virada do ano pudesse travar o nosso faturamento em função de ajustes que a Totos tenha feito dentro do [LOCAL] e a gente não ter parametrizado nada, a gente poderia estar travando o nosso faturamento. Não aconteceu. Bom, agora eu preciso organizar dentro da parte contábil o lançamento correto da tributação e tudo mais, entender melhor, fazer o lançamento correto, as parametrizações ali dentro do sistema e para deixar rodando tudo redondinho.\n[LOCUTOR 26]: [EMPRESA]. Não parou o faturamento porque você faz prorrogou para final de março início de abril. Então eles deram esse prazo para se adequar até eles também se adequarem lá que tinha muitas validações que. estavam parametrizada correta devido à NT deles mas na hora de faturar eles mesmo estavam parando as notas reprovando as notas fiscais dos clientes. Então até para eles se adequarem também e dar\n[LOCUTOR 46]: o prazo\n[LOCUTOR 26]: para o sistema se adequar dentro das normativas deles. Eles aumentaram esse prazo. Então a necessidade do treinamento da reforma tributária pelo que eu\n[LOCUTOR 46]: entendi\n[LOCUTOR 26]: não só o treinamento mas toda a parte de parametrização atualização cadastro de figuras tributárias que é preciso também lá na rotina 4000 de acordo com com a ONCM dos produtos de vocês. Então pode ser que tenha aí um cadastro de cinco a oito figuras tributárias de acordo com o ciclete de cada produto. Mas aí cabe um treinamento uma parametrização dessa onde o consultor na medida do atendimento ele vai explicando para vocês vai demonstrando lá de acordo com a tabela do [LOCAL] a tributação do [EMPRESA] e [EMPRESA] tem redução se não tem. A parte fiscal seria a parte de geração de SPED relatórios alteração de tributos essas coisas.\n[LOCUTOR 46]: é sim seria\n[LOCUTOR 26]: de\n[LOCUTOR 46]: repente\n[LOCUTOR 26]: o humano\n[LOCUTOR 46]: tudo exatamente passar a fazer um passadão geral. Claro que daqui a pouco o [PESSOA] disse assim Olha nós temos esse treinamento aqui a gente começa a evoluir nesse treinamento e tanto da parte da [LOCAL] quanto o nosso escritório de contabilidade. Não essa parte aqui já dominamos tudo mais vamos dar um pouco mais de atenção para uma outra parte que a gente está mais em dúvida tudo mais. Até porque cada um, cada agente que vai participar desses treinamentos pode ter dúvidas diferentes ou ter conhecimentos diferentes, então para alguns, de repente, vai ser mais, vai ser, uma determinada parte vai ser mais importante, para outros, outra parte vai ser mais importante, mas fazer um apanhado geral.\n[LOCUTOR 26]: [LOCAL]. A parte contábil quando você fala da parte contábil para eu entender vocês têm um módulo contábil do [PESSOA] hoje também ou não.\n[LOCUTOR 46]: Cara sendo bem honesto. Eu não tenho, eu não sei como é que funciona,\n[LOCUTOR 34]: se a gente... Temos,\n[LOCUTOR 46]: temos\n[LOCUTOR 34]: cont\n[LOCUTOR 19]: e fiscal.\n[LOCUTOR 26]: Tem o contábil, então teria que ter também, [PESSOA], um treinamento da parte do módulo 21, da parte contábil, dos fechamentos contábeis, integrações, essas\n[LOCUTOR 34]: coisas, né? Eu acho que a [PESSOA] já consegue, já usa isso já.\n[LOCUTOR 26]: A \n[LOCUTOR 13]: a\n[LOCUTOR 26]: analista\n[LOCUTOR 46]: fiscal de vocês?\n[LOCUTOR 26]: Isso, exato.\n[LOCUTOR 34]: A [PESSOA] fazia e ela já está há um tempo, hoje quem faz é ela.[PESSOA] da \n[LOCUTOR 42]: Agora tem que ver se estão usando as rotinhas do contábil mesmo,\n[LOCUTOR 26]: né [PESSOA]? É, isso que eu ia perguntar. Por exemplo, a parte de fechamento, as regras contábeis estão todas corretas? Estão tudo ajustadas? Você sabe me dizer, [PESSOA]?\n[LOCUTOR 34]: Corretas eu não consigo\n[LOCUTOR 46]: dizer.\n[LOCUTOR 34]: Sendo usadas e ajustadas porque ela precisa hoje\n[LOCUTOR 26]: sim.\n[LOCUTOR 34]: A gente usa o módulo contábil tem mais de 10 anos.\n[LOCUTOR 26]: Mas nunca teve uma vamos dizer\n[LOCUTOR 34]: um\n[LOCUTOR 26]: treinamento teve uma reciclagem\n[LOCUTOR 34]: teve reciclagem não os quatro anos atrás teve\n[LOCUTOR 46]: treinamento.\n[LOCUTOR 34]: Tem uma pessoa de contábil ficou aqui dentro. Não vou lembrar o nome dele porque ele era da \n[LOCUTOR 35]: mesmo.\n[LOCUTOR 34]: Não vou lembrar o nome. Ele ficou uma semana\n[LOCUTOR 26]: aqui conosco. Não tranquilo. Eu vou colocar aqui no mapeamento como tendo um treinamento contábil mas se não for necessidade depois é só vocês passarem que não não tem o interesse de fazer a parte desse treinamento. Em relação à parte financeira como que está hoje. Vocês fazem pagamentos hoje manuais geram um arquivo lá o arquivo magnético magnético para fazer esses\n[LOCUTOR 46]: pagamentos.\n[LOCUTOR 26]: Como que está aí essa parte financeira hoje\n[LOCUTOR 46]: o\n[LOCUTOR 34]: [PESSOA].\n[LOCUTOR 46]: Na verdade, a parte financeira hoje até funciona muito\n[LOCUTOR 26]: bem.\n[LOCUTOR 46]: A questão seria muito mais de apresentar ferramentas que a gente não utiliza para gerar um processo mais ágil aqui\n[LOCUTOR 34]: dentro.\n[LOCUTOR 46]: Por exemplo, hoje a gente não utiliza a conciliação bancária, por exemplo.\n[LOCUTOR 26]: 604? Como? 604?\n[LOCUTOR 46]: É, a gente usa 604, mas a gente não usa o arquivo para fazer a conciliação, por\n[LOCUTOR 34]: exemplo.\n[LOCUTOR 26]: Ou da 643,\n[LOCUTOR 46]: né? Isso, acho que \n[LOCUTOR 16]: 643. 643,\n[LOCUTOR 34]: isso.\n[LOCUTOR 46]: Então, coisas assim que a gente poderia, daqui a pouco, a própria TOTOS está nos mostrando algumas coisas de ferramentas que a gente não tenha hoje contratado, dizendo, ó, isso aqui seria interessante para vocês, isso aqui seria interessante para vocês. É aquele negócio, como eu não tenho hoje uma vitrine da TOTOS para entender\n[LOCUTOR 34]: o que\n[LOCUTOR 46]: de produto vocês têm à venda, têm a oferecer para nós, e que possa justamente ajudar o nosso dia a dia\n[LOCUTOR 26]: aqui. [EMPRESA]. Eu tenho um mapeamento aqui, como o [PESSOA] falou, a gente trabalha num departamento aqui que é o [LOCAL], que é o [EMPRESA]. Então o intuito nosso dessa consultoria é sempre trazer novidades para o cliente. Então sempre que tem algum lançamento de processos internos o verbo multifilial é um processo hoje que vários clientes vão utilizar. Então quando sai esses processos novos dentro do [LOCAL] a gente costuma já apresentar para os clientes que hoje tem contrato com a gente na consultoria. Então devido a grande demanda de de acesso. Eu faço acesso hoje tanto esse online que a gente está batendo esse papo quanto presencial em cliente. eu criei um checklist, onde ele traz os principais processos que os clientes deveriam ter, que hoje eles não têm. Então, com esse checklist, eu consigo, por exemplo, demonstrar isso que você está me\n[LOCUTOR 46]: pedindo.\n[LOCUTOR 26]: [PESSOA],\n[LOCUTOR 46]: hoje\n[LOCUTOR 26]: eu não conhecia do processo, por exemplo, do [PESSOA], do [PESSOA]. Então, a gente consegue mapear\n[LOCUTOR 46]: isso\n[LOCUTOR 26]: e depois fazer um projeto para você de um contrato de horas de\n[LOCUTOR 46]: consultoria\n[LOCUTOR 26]: dentro daquilo que você vai realmente necessitar entendeu. Então a gente já levantou o módulo fiscal o módulo da reforma tributária e as outras aqui e a gente consegue fazer esse levantamento agora. Posso fazer esse checklist com vocês aqui rapidinho, porque aí a gente já vai ter esses insumos que você tá me\n[LOCUTOR 46]: pedindo. Tá, eu vou precisar que o [PESSOA] me ajude, porque o [PESSOA] tem muito\n[LOCUTOR 26]: mais conhecimento,\n[LOCUTOR 46]: tem determinado...\n[LOCUTOR 34]: Mas o que seria, deixa eu entender, eu tava com outra pessoa falando no meu ouvido que\n[LOCUTOR 46]: eu não...\n[LOCUTOR 26]: Não, tranquilo, você sabe, você vai entender bem. Lá no [LOCAL], você falou que já teve o [LOCAL],\n[LOCUTOR 34]: né?\n[LOCUTOR 46]: Sim.\n[LOCUTOR 26]: Aí lá no [LOCAL] ele não trazia para você lá na aba da gestão o percentual de utilização do\n[LOCUTOR 46]: sistema.\n[LOCUTOR 34]: Sim a gente chegou a 64\n[LOCUTOR 46]: por\n[LOCUTOR 26]: cento. Exato aquilo lá seria\n[LOCUTOR 34]: [PESSOA] aquilo que o fiscal usava\n[LOCUTOR 46]: 100 por\n[LOCUTOR 26]: cento. Então é isso aí. [PESSOA] \n[LOCUTOR 21]: aquilo lá.\n[LOCUTOR 26]: Só que eu faço esse checklist devido com\n[LOCUTOR 46]: a\n[LOCUTOR 26]: fazendo o par\n[LOCUTOR 10]: de\n[LOCUTOR 26]: mais de 100 clientes que eu j\n[LOCUTOR 14]: atendi\n[LOCUTOR 26]: em Assessments e mais de 200 clientes em\n[LOCUTOR 46]: consultoria.\n[LOCUTOR 34]: Então,\n[LOCUTOR 26]: sempre nesses atendimentos, nesses\n[LOCUTOR 46]: Assessments,\n[LOCUTOR 26]: eu via que tem processos hoje que os clientes deveriam\n[LOCUTOR 46]: ter,\n[LOCUTOR 26]: que é comum para todos os clientes, independente do segmento. Porém, eles não rodam esses\n[LOCUTOR 46]: processos.\n[LOCUTOR 26]: Então às vezes é um processo que dá um ganho de agilidade ali dentro da parte financeira da parte de compras que o cliente não utiliza e fica fazendo de forma manual. Então esse checklist eu vou fazendo as perguntas vocês me falam se utiliza o processo da rotina tal ou\n[LOCUTOR 46]: não.\n[LOCUTOR 26]: E aí eu consigo dar esse\n[LOCUTOR 46]: sumo que\n[LOCUTOR 26]: o [PESSOA] está me\n[LOCUTOR 46]: pedindo.\n[LOCUTOR 26]: Fala hoje você não utiliza [PESSOA] aí no seu departamento [PESSOA] o processo do [LOCAL]. Mas a gente consegue parametrizar e se te entregar em consultoria. Você tem o processo de sendo discursor no sistema que você não utiliza? Tem interesse de\n[LOCUTOR 34]: utilizar? Mas isso teria que ter a equipe toda junto para a gente validar o que é usado ou não usado.\n[LOCUTOR 46]: Por exemplo,\n[LOCUTOR 34]: eu sou de TI. Eu por estar aqui há bastante tempo eu conheço algumas rotinas. Então mas eu por exemplo hoje não consigo dizer nos outros setores que cada um usa e quanto usa entendeu.\n[LOCUTOR 46]: [LOCUTOR 15]: entendi e nem o [PESSOA] vai conseguir dizer também\n[LOCUTOR 34]: porque o setor deles são quatro ou cinco pessoas e cada uma é responsável por uma\n[LOCUTOR 26]: área.\n[LOCUTOR 34]: Aquela pessoa domina as rotinas\n[LOCUTOR 46]: dela\n[LOCUTOR 34]: do dia a dia dela ali mas o [PESSOA] não vai saber te dizer qual rotina que é. [EMPRESA].\n[LOCUTOR 26]: [PESSOA], você acha que, não sei, a gente marcaria um outro momento e vinha esse\n[LOCUTOR 46]: pessoal,\n[LOCUTOR 26]: ou a gente enviaria pra ele esse checklist e eles\n[LOCUTOR 34]: receberiam\n[LOCUTOR 26]: e devolveriam? É mais fácil a\n[LOCUTOR 34]: gente receber\n[LOCUTOR 46]: o checklist.[PESSOA] da \n[LOCUTOR 42]: É, acho que enviar o checklist, porque hoje é complicado pra reunir esse pessoal,\n[LOCUTOR 34]: [PESSOA]. É, hoje \n[LOCUTOR 21]: segundo.[PESSOA] da \n[LOCUTOR 42]: Não, eu digo hoje assim, no sentido, é difícil marcar uma data pra reunir esse pessoal pra gente fazer esse levantamento ou você prefere o envio do\n[LOCUTOR 34]: checklist? É, eu acho que o checklist tem algumas áreas ali, por exemplo, principalmente no [PESSOA], que eu não consigo parar a pessoa.\n[LOCUTOR 46]: Exatamente. Exatamente.\n[LOCUTOR 34]: \n[LOCUTOR 44]: muito difícil conseguir parar. É muito difícil,\n[LOCUTOR 26]: claro. Porque assim, o \n[LOCUTOR 7]: e\n[LOCUTOR 26]: o [PESSOA],\n[LOCUTOR 34]: dentro\n[LOCUTOR 26]: do... Não, imagina, ainda mais energiando,\n[LOCUTOR 46]: né?\n[LOCUTOR 34]: Porque assim, dentro do... A maioria das equipes estão com pessoas de férias,\n[LOCUTOR 46]: entendeu?\n[LOCUTOR 26]: é complicado\n[LOCUTOR 46]: mesmo,\n[LOCUTOR 26]: porque dentro do checklist, por exemplo, eu tenho processos\n[LOCUTOR 46]: lá\n[LOCUTOR 26]: e dentro daquilo que vocês marcarem lá de sim\n[LOCUTOR 46]: ou não,\n[LOCUTOR 26]: a gente consegue fazer um levantamento\n[LOCUTOR 34]: de\n[LOCUTOR 26]: processos que você n\n[LOCUTOR 17]: tem\n[LOCUTOR 26]: e vocês, através do contrato das consultorias, ele consegue entregar para vocês, consultor, consegue implementar esse processo e fazer toda\n[LOCUTOR 46]: a parte\n[LOCUTOR 26]: de implementação, treinamento e entregar o processo rodando para vocês,\n[LOCUTOR 46]: entendeu?\n[LOCUTOR 34]: Não, através do checklist a gente pega ali, ó,\n[LOCUTOR 46]: fulano,\n[LOCUTOR 34]: separa 10 minutos aí, olha isso\n[LOCUTOR 46]: aqui,\n[LOCUTOR 26]: me\n[LOCUTOR 34]: diz o que que tu usa e o que que tu\n[LOCUTOR 46]: não usa hoje. Exatamente, acho que fica mais fácil pra nós.\n[LOCUTOR 26]: Por exemplo, hoje vocês trabalham com o processo de pague fora aí? Que é o processo de gerar arquivos para\n[LOCUTOR 34]: pagamentos?\n[LOCUTOR 26]: Que é o [EMPRESA] também, conhecido como [EMPRESA]?\n[LOCUTOR 46]: E na verdade na verdade eu não sei eu eu a gente testou um PIX cobrança mas é outra coisa\n[LOCUTOR 26]: né. É outra\n[LOCUTOR 46]: coisa.\n[LOCUTOR 26]: [LOCUTOR 6]: é o seguinte exemplo você tem os pagamentos que você faz para fornecedores [EMPRESA] outras pessoas\n[LOCUTOR 34]: pagamentos\n[LOCUTOR 26]: mesmo. Ele aí no processo do sistema hoje tem como você gerar um arquivo de pagamento. Então ao invés do [PESSOA] seu ir lá no [LOCAL] e ficar pagando t\n[LOCUTOR 36]: a\n[LOCUTOR 26]: título ele gera um arquivo com todos esses\n[LOCUTOR 34]: pagamentos.\n[LOCUTOR 26]: Sobe lá no [LOCAL] do banco. O banco faz esses pagamentos retorna esse arquivo para vocês. Aí pega esse arquivo processa no sistema e automaticamente ele já baixa todos os títulos que estavam naquele arquivo. Esse é o processador [EMPRESA] que a gente chama também de [EMPRESA] ou\n[LOCUTOR 34]: [LOCAL]. Isso\n[LOCUTOR 26]: então ele é um processador que dá um ganho de agilidade muito grande dentro do processo [PESSOA] porque normalmente vamos pegar aí segunda-feira tem seu [PESSOA] tem títulos que venceu o sábado venceu o domingo e está vencendo na segunda. Então normalmente o que eles fazem lá no [LOCAL] e fica lá título a título fazendo esses pagamentos\n[LOCUTOR 34]: lá.\n[LOCUTOR 26]: Então com o arquivo ele dá um ganho de agilidade no processo do [PESSOA] do contas a pagar no caso.\n[LOCUTOR 34]: Sim.\n[LOCUTOR 26]: Mas tranquilo, então, aí eu vou organizar\n[LOCUTOR 46]: aqui\n[LOCUTOR 26]: o checklist, porque ele tem muita informação, eu vou enxugar o máximo de informação possível aqui. Deixa eu compartilhar a tela aqui, [PESSOA], só para você ver, que aí lá na hora que você for falar com o\n[LOCUTOR 46]: pessoal,\n[LOCUTOR 26]: aí você vai marcar só para mim, só essa parte de [PESSOA]\n[LOCUTOR 33]: aqui. Está\n[LOCUTOR 26]: vendo esse campo aqui, a aderência? só sim\n[LOCUTOR 46]: ou n\n[LOCUTOR 3]: esse trabalho com ficha\n[LOCUTOR 46]: sim\n[LOCUTOR 26]: sugestão de compra de sistema não já tem um giro customizado não trabalho\n[LOCUTOR 46]: com\n[LOCUTOR 26]: política comercial produto fornecedor não sim aí às vezes por exemplo deixa eu pegar uma\n[LOCUTOR 34]: aqui\n[LOCUTOR 46]: e\n[LOCUTOR 26]: aqui no [PESSOA]\n[LOCUTOR 46]: boletins Aqui,\n[LOCUTOR 26]: Bolepix, aqui é o [EMPRESA]. Ah, não trabalho com o [EMPRESA], trabalho com o da [LOCAL], por exemplo. Você coloca aqui outros, aí na frente você coloca para a minha\n[LOCUTOR 46]: [LOCAL].\n[LOCUTOR 26]: para eu saber porque isso que \n[LOCUTOR 21]: importante\n[LOCUTOR 26]: até para a gente entender porque que por exemplo hoje eu tenho o da todos\n[LOCUTOR 34]: e\n[LOCUTOR 26]: trabalho com um terceiro por causa do preço porque o processo está mais maduro. Então isso que é até importante tanto para a gente interna para a parte comercial. Depois ter essa informação e poder estruturar uma forma de entregar um serviço melhor para vocês também est\n[LOCUTOR 11]: ok.\n[LOCUTOR 26]: Aí tem toda a parte financeira aqui. Aí a gente entra na parte de compras tem verbas de crédito ICA venda meta política comercial campanha de desconto tudo. Aí às vezes aqui na parte de baixo tem alguma coisa validando medicamento [LOCAL] importação WMS se não tiver não precisa preencher pode passar batido por elas beleza.\n[LOCUTOR 46]: [LOCAL].\n[LOCUTOR 26]: Eu vou organizar o documento aqui, aí eu passo para o [PESSOA] e você encaminha para eles, né, [PESSOA] da \n[LOCUTOR 42]: [LOCAL] sim.\n[LOCUTOR 26]: Tá,[PESSOA] da \n[LOCUTOR 42]: beleza.\n[LOCUTOR 26]: Mais alguma coisa, pessoal?\n[LOCUTOR 46]: Não, na verdade, é isso aí. A gente fazer esse levantamento de possíveis demandas aí e a segunda coisa é fazer\n[LOCUTOR 28]: um orçamento\n[LOCUTOR 46]: para a gente ter esse treinamento cont\n[LOCUTOR 24]: e\n[LOCUTOR 46]: fiscal.\n[LOCUTOR 26]: [LOCAL], eu vou já organizar esse documento aqui, vou encaminhar para o [PESSOA], aí assim, [PESSOA] e [PESSOA], o que que eu vou trazer\n[LOCUTOR 28]: para vocês?\n[LOCUTOR 26]: O quanto mais rápido vocês conseguirem trazer esse checklist, retornar esse para a gente melhor porque porque apesar da reforma tributária ela ainda ser validada só a partir de\n[LOCUTOR 34]: mar\n[LOCUTOR 22]: ela tem dado\n[LOCUTOR 28]: algumas\n[LOCUTOR 26]: algumas intercorrências em aprovações de nota fiscal.\n[LOCUTOR 28]: Ent\n[LOCUTOR 20]: assim e\n[LOCUTOR 28]: n\n[LOCUTOR 3]: por parte da própria [LOCAL] é por parte da própria [LOCAL] que \n[LOCUTOR 4]: igual falei\n[LOCUTOR 26]: lá no início da nossa reunião. Eles mesmo trazem lá na NT deles que é a forma de tributar o produto é daquele jeito só que na hora de faturar dá algum erro lá e aí às vezes o consultor tem que entrar e fazer os ajustes para aprovar essa nota fiscal. Por que eu estou dizendo isso para\n[LOCUTOR 28]: n\n[LOCUTOR 20]: deixar o mais próximo possível lá para o mês de fevereiro que a gente sabe que tem carnaval e isso vai enrolar um pouco. e não deixar o mais\n[LOCUTOR 28]: próximo\n[LOCUTOR 26]: poss\n[LOCUTOR 27]: para\n[LOCUTOR 26]: março,\n[LOCUTOR 28]: porque\n[LOCUTOR 26]: senão, a partir de março, vai realmente travar e não vai conseguir faturar se não tiver com essas informações cadastradas da reforma\n[LOCUTOR 46]: tributária. E\n[LOCUTOR 26]: aí a gente está falando de todos os processos da empresa. Exemplo, entrada de mercadoria hoje, ela tem que ser única ou exclusivamente por importação de XML. Não pode mais fazer essas entradas manuais, como os clientes normalmente fazem. Por quê? Porque os dados do [EMPRESA] e [EMPRESA] vão vir da nota fiscal do seu\n[LOCUTOR 28]: fornecedor\n[LOCUTOR 26]: e elas\n[LOCUTOR 28]: est\n[LOCUTOR 20]: somente no XML. Já é importação de\n[LOCUTOR 28]: XML? Sim.\n[LOCUTOR 26]: Então vocês não vão ter problema\n[LOCUTOR 28]: nessa\n[LOCUTOR 26]: parte. E aí a\n[LOCUTOR 28]: gente vai\n[LOCUTOR 26]: precisar\n[LOCUTOR 28]: atualizar\n[LOCUTOR 26]: a rotina. Hoje já está na versão 37,\n[LOCUTOR 34]: [PESSOA], seu Winthorne? Maioria. É que não tem todas ainda,\n[LOCUTOR 28]: né?\n[LOCUTOR 26]: É mas aí tem algumas\n[LOCUTOR 28]: que s\n[LOCUTOR 20]: as principais que o consultor vai demonstrar para vocês que é preciso estar na versão\n[LOCUTOR 28]: 37\n[LOCUTOR 26]: para validar as questões da reforma tributária assim como\n[LOCUTOR 46]: o\n[LOCUTOR 26]: DOC fiscal também tem uma\n[LOCUTOR 28]: vers\n[LOCUTOR 20]: a última versão dele que é preciso atualizar para contemplar essas questões da reforma\n[LOCUTOR 34]: tributária. Ent\n[LOCUTOR 20]: só\n[LOCUTOR 34]: tem que analisar assim como são para só confirmar mas eu\n[LOCUTOR 26]: vou sempre\n[LOCUTOR 34]: ter\n[LOCUTOR 26]: calde também. Vocês têm\n[LOCUTOR 28]: ou não.\n[LOCUTOR 26]: Não, só a venda normal 316, fatura cargo, o balcão, o balc\n[LOCUTOR 17]: reserva. Não tem\n[LOCUTOR 46]: balc\n[LOCUTOR 20]: também.\n[LOCUTOR 34]: Só a força de venda e\n[LOCUTOR 46]: 316.\n[LOCUTOR 26]: Telemarket, né? Monta a carga e faz as\n[LOCUTOR 34]: entregas.\n[LOCUTOR 26]: Isso. Show. Não, beleza. Então da minha parte é isso,\n[LOCUTOR 46]: pessoal.\n[LOCUTOR 26]: Se vocês tiverem mais algum assunto pra gente poder falar. Quer falar alguma\n[LOCUTOR 28]: coisa, [PESSOA] da \n[LOCUTOR 42]: Bom, Elisir, só mais a questão desse levantamento que eles vão responder pra gente e vai ser essencial até pra gente ver a quantidade de hora que a gente conseguir adequar melhor contigo aí, qual a melhor oferta pra passar\n[LOCUTOR 28]: aí pro cliente. [PESSOA]. Eu fico, então, nesse aguardo do [PESSOA] e do [PESSOA] para a gente poder quantificar\n[LOCUTOR 34]: isso.\n[LOCUTOR 28]: E, [PESSOA], de novo, a ideia aqui é só para a gente entender o que faz mais sentido. Se é eu te vender algumas horas que não vai te atender, talvez em outras demandas, ou se a gente faz algo que seja mais direcionado, mais completo para atender vocês com o menor [PESSOA] da \n[LOCUTOR 42]: possível. E aquela questão, né, [LOCAL], o intuito nosso não é vender, simplesmente vou vender um pacote de horas. A gente quer atender a uma necessidade. Vou vender um pacote de horas X, cara, talvez seja grande demais para o cliente, o cliente não tem necessidade daquele pacote. Ou talvez vender um pacote pequeno demais, com uma quantidade de muitas ações, a gente conseguir não atender também. Então,\n[LOCUTOR 46]: a gente [EMPRESA] [PESSOA] \n[LOCUTOR 42]: ao máximo adequar horas versus necessidade e oferecer a melhor oferta.\n[LOCUTOR 28]: [LOCAL]?\n[LOCUTOR 46]: [LOCAL],\n[LOCUTOR 28]: perfeito. Eu só fico no aguardo de vocês assim que eu enviar para vocês aí a planilha, vocês me responderem o mais rápido possível para a gente já dar andamento noGeovane [PESSOA] \n[LOCUTOR 42]: processo. [LOCAL], o [PESSOA] me passando aqui, eu já disparo o e-mail para todos os envolventes na agenda, tá?\n[LOCUTOR 46]: Tá, e daí a gente já tenta agilizar isso aí para fazer a devolutiva\n[LOCUTOR 34]: [PESSOA] da \n[LOCUTOR 42]: planilha.\n[LOCUTOR 26]: [LOCAL].\n[LOCUTOR 34]: [LOCAL]. Tá\n[LOCUTOR 28]: certo.\n[LOCUTOR 26]: Obrigado, pessoal. [LOCAL],\n[LOCUTOR 46]: pessoal.[PESSOA] da \n[LOCUTOR 42]: Obrigado,\n[LOCUTOR 26]: boa semana.\n[LOCUTOR 46]: [LOCAL],\n[LOCUTOR 26]: obrigado, até mais. Tchau. Vai terGeovane [PESSOA] \n[LOCUTOR 42]: que sair.', 'Analise': '{\n  "resumo_geral": "Reunião de alinhamento com a unidade TOTVS Rio Grande do Sul para diagnóstico de necessidades operacionais. O foco principal é a transição para um escritório de contabilidade externo e a adequação do sistema à Reforma Tributária. A equipe da TOTVS propôs um checklist de processos para mapear necessidades e evitar o engessamento de faturamento, visando a venda de um pacote de horas de consultoria customizado.",\n  "principais_assuntos": "Consultoria em processos contábeis e fiscais, adequação à Reforma Tributária, uso de módulos financeiros (conciliação bancária e pagamentos via arquivo) e diagnóstico de aderência ao sistema (Assessment).",\n  "dores": [\n    {\n      "texto": "Dificuldade de operacionalização contábil e fiscal após a mudança para um escritório terceirizado.",\n      "trecho": "Hoje entrei na [LOCAL] sem conhecer o entorpe e indo para a parte financeira. E no meio desse ano de 25, houve uma transição onde a [LOCAL] passou a utilizar toda a parte contábil e fiscal sendo feita por terceiros."\n    },\n    {\n      "texto": "Falta de conhecimento interno sobre as rotinas e ferramentas disponíveis no sistema para otimização de processos.",\n      "trecho": "Como eu não tenho hoje uma vitrine da TOTOS para entender o que de produto vocês têm à venda, têm a oferecer para nós, e que possa justamente ajudar o nosso dia a dia aqui."\n    },\n    {\n      "texto": "Risco de travamento de faturamento por falta de parametrização da Reforma Tributária.",\n      "trecho": "A única coisa que o que eu estava preocupado era se na virada do ano pudesse travar o nosso faturamento em função de ajustes que a Totos tenha feito dentro do [LOCAL] e a gente não ter parametrizado nada."\n    }\n  ],\n  "oportunidades": [\n    {\n      "texto": "Venda de pacote de horas de consultoria para treinamento contábil, fiscal e implementação de novas rotinas.",\n      "trecho": "O [PESSOA] é quem vai fazer o levantamento do que a gente vai conseguir atender vocês para poder passar o orçamento e valores de entrega do serviço."\n    },\n    {\n      "texto": "Melhoria de eficiência operacional através da implementação de rotinas financeiras negligenciadas (ex: conciliação bancária e automatização de pagamentos).",\n      "trecho": "Hoje a gente não utiliza a conciliação bancária, por exemplo."\n    },\n    {\n      "texto": "Up-sell de módulos de inteligência tributária e atualização de versão (v.37).",\n      "trecho": "A gente queria entender um pouco melhor sobre o produto inteligência tributária"\n    }\n  ],\n  "risco_churn": "medio",\n  "evidencias_churn": [\n    {\n      "texto": "Nota NPS de 4 (em 2024) indica insatisfação histórica recorrente com a entrega de valor ou relacionamento.",\n      "trecho": null\n    },\n    {\n      "texto": "Transição de operação contábil para terceiros pode reduzir a dependência da plataforma ou expor falhas críticas no suporte atual.",\n      "trecho": "A gente tinha pessoas no contábil que saíram e hoje é um escritório externo."\n    }\n  ],\n  "sentimento": 5.0,\n  "tarefas": [\n    {\n      "nome": "Envio do checklist de processos para o cliente",\n      "data_prevista": null,\n      "trecho": "Eu vou organizar o documento aqui, aí eu passo para o [PESSOA] e você encaminha para eles"\n    },\n    {\n      "nome": "Preenchimento e devolutiva do checklist pela equipe do cliente",\n      "data_prevista": null,\n      "trecho": "O quanto mais rápido vocês conseguirem trazer esse checklist, retornar esse para a gente melhor"\n    },\n    {\n      "nome": "Elaboração de orçamento de horas de consultoria após diagnóstico",\n      "data_prevista": null,\n      "trecho": "Eu fico, então, nesse aguardo do [PESSOA] e do [PESSOA] para a gente poder quantificar isso."\n    }\n  ]\n}'}

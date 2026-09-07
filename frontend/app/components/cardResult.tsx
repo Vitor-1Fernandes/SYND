@@ -1,53 +1,82 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ExternalLink } from "lucide-react";
 
-export interface TranscriptCardProps {
-    id: string | number,
-    meetingLabel?: string;
-    meetingTitle?: string;
-    duration?: string;
-    speakers?: string;
-    sentimentLabel?: string;
-    sentimentScore?: number;
-    summaryLabel?: string;
-    summary?: string;
-    onOpen?: () => void;
+export interface ReuniaoRaw {
+  ID: string;
+  Data: string;
+  "Formato da reunião": string;
+  "ID status da reunião": string;
+  Status: string;
+  Duração: string;
+  CODT: string;
+  "Tipo de recurso": string;
+  "Reunião externa": boolean;
+  "Data de criação": string;
+  UF: string;
+  CNAE: string;
+  "Nome da unidade": string;
+  Segmento: string;
+  "Faixa de faturamento do cliente": string;
+  "Data da última pesquisa": string;
+  "Nota NPS": string;
+  Transcrição: string;
+  Analise: string; // string JSON, precisa parsear
+  onOpen?: () => void;
 }
 
-export default function CardResult(
-  {
-    id = 0,
-    meetingLabel = "-",
-    meetingTitle = "-",
-    duration = "-",
-    speakers = "-",
-    sentimentLabel = "-",
-    sentimentScore = 0,
-    summaryLabel = "-",
-    summary = "Encontramos um problema",
-    onOpen = () => {}
-  }
-    :TranscriptCardProps) {
+interface AnaliseParsed {
+  resumo_geral: string;
+  sentimento: number;
+}
+
+function formatarDuracao(duracao: string): string {
+  const [h, m] = duracao.split(":");
+  const horas = parseInt(h, 10);
+  const minutos = parseInt(m, 10);
+  return horas > 0 ? `${horas}h${minutos}min` : `${minutos}min`;
+}
+
+function labelSentimento(score: number): string {
+  if (score >= 7) return "[#21D4FD]" ;
+  if (score >= 4) return "[#FFB020]" ;
+  return "[#EF4444]";
+}
+
+export default function CardResult(raw: ReuniaoRaw) {
+  const analise: AnaliseParsed = JSON.parse(raw.Analise);
+
+  const meetingTitle = raw["Nome da unidade"] ?? "-";
+  const duration = raw.Duração ? formatarDuracao(raw.Duração) : "-";
+  const sentimentScore = analise.sentimento ?? 0;
+  const sentimentLabel = labelSentimento(sentimentScore);
+  const summary = analise.resumo_geral ?? "Encontramos um problema";
+  const onOpen = raw.onOpen ?? (() => {});
+  const data = raw.Data
+
+  function formatarDataBR(dataStr: string): string {
+  // Espera formato "YYYY-MM-DD HH:mm:ss"
+  const [datePart, timePart] = dataStr.split(" ");
+  const [ano, mes, dia] = datePart.split("-");
+  const hora = timePart?.slice(0, 5) ?? ""; // pega só HH:mm
+
+  return `${dia}/${mes}/${ano}${hora ? ` às ${hora}` : ""}`;
+}
+
   return (
     <div className="lg:border-l-2 border-white/80 lg:pr-10">
-      <div className="flex w-full box-border rounded-[5px] px-3 lg:px-8 py-7 font-sans text-[#E6EDF3]">
+      <div className="flex w-full box-border rounded-[5px] px-3 lg:px-8 lg:pb-7 pb-4 font-sans text-[#E6EDF3]">
         <div>
-          {/* Header */}
-          <div className="mb-1 lg:mb-5 flex items-center justify-between">
-            <h2 className="m-0 lg:text-xl lg:font-semibold text-[11px] tracking-wide text-[#7C93A8] lg:text-[#F5F8FA]">
-              TRANSCRIÇÃO
-            </h2>
-            <button
-              onClick={onOpen}
-              className="border-b-[2px] pl-1 py-1 text-sm font-semibold text-[#3FD0F5]"
-            >
-              <ArrowUpRight />
-            </button>
-          </div>
-
           {/* Meeting info */}
           <div className="mb-[22px]">
-            <div className="mb-1.5 text-[11px] tracking-wide text-[#7C93A8]">
-              {meetingLabel}
+            <div className="flex items-end mb-1.5 text-[11px] tracking-wide text-[#7C93A8] justify-between">
+              REUNIÃO
+
+              <button
+              onClick={onOpen}
+              className=" pl-1 pt-4 text-sm font-semibold text-[#3FD0F5]"
+            >
+              <ExternalLink />
+            </button>
+
             </div>
             <div className="text-md lg:text-lg font-semibold text-[#F5F8FA]">
               {meetingTitle}
@@ -57,18 +86,18 @@ export default function CardResult(
           {/* Stats row */}
           <div className="mb-5 flex flex-wrap justify-between lg:justify-start lg:gap-12 border-b border-white/10 pb-5">
             <Stat label="Duração" value={duration} />
-            <Stat label="Locutores" value={speakers} />
+            <Stat label="Data" value={formatarDataBR(data)} />
             <Stat
               label="Sentimento"
-              value={`${sentimentLabel} - ${sentimentScore}`}
-              valueColor="text-[#04D5F9]"
+              value={`${sentimentScore} / 10`}
+              valueColor={`text-${sentimentLabel}`}
             />
           </div>
 
           {/* Summary */}
           <div>
             <div className="mb-2.5 text-[11px] tracking-wide text-[#7C93A8]">
-              {summaryLabel}
+              RESUMO
             </div>
             <div className="flex gap-3.5">
               <div className="w-[3px] shrink-0 rounded-sm bg-[#3FD0F5]" />

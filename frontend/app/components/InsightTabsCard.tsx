@@ -1,41 +1,59 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
-export interface InsightItem {
-  title: string;
-  description: string;
+interface AnaliseParsed {
+  dores: { texto: string; trecho: string }[];
+  oportunidades: { texto: string; trecho: string }[];
+  evidencias_churn: { texto: string; trecho: string }[];
+  tarefas: { nome: string; trecho: string; data_prevista: string | null }[];
+}
+
+export interface InsightTabsCardProps {
+  Analise: string; // string JSON, precisa parsear
+  defaultTabKey?: string;
 }
 
 const TABS = [
   { key: "oportunidades", label: "Oportunidades", color: "#FFB020" },
   { key: "dores", label: "Dores", color: "#EF4444" },
   { key: "churn", label: "Churn", color: "#EF4444" },
-  { key: "task", label: "Task", color: "#21D4FD" },
+  { key: "task", label: "Tasks", color: "#21D4FD" },
 ] as const;
 
-export interface InsightTabsCardProps {
-  oportunidades?: InsightItem[];
-  dores?: InsightItem[];
-  churn?: InsightItem[];
-  task?: InsightItem[];
-  defaultTabKey?: string;
+interface InsightItem {
+  title: string;
+  description: string;
 }
 
 export default function InsightTabsCard({
-  oportunidades = [],
-  dores = [],
-  churn = [],
-  task = [],
+  Analise,
   defaultTabKey,
 }: InsightTabsCardProps) {
-  const [activeKey, setActiveKey] = useState(defaultTabKey ?? TABS[0].key);
+  const analise: AnaliseParsed = JSON.parse(Analise);
 
   const itemsByKey: Record<string, InsightItem[]> = {
-    oportunidades,
-    dores,
-    churn,
-    task,
+    oportunidades: analise.oportunidades.map((o) => ({
+      title: o.texto,
+      description: o.trecho
+    })),
+    dores: analise.dores.map((d) => ({
+      title: d.texto,
+      description: d.trecho,
+    })),
+
+    churn: analise.evidencias_churn.map((c) => ({
+      title: c.texto,
+      description: c.trecho,
+    })),
+
+    task: analise.tarefas.map((t) => ({
+      title: t.nome,
+      description: t.data_prevista
+        ? `${t.trecho} - (previsto para: ${t.data_prevista})`
+        : `${t.trecho} `
+    })),
   };
 
+  const [activeKey, setActiveKey] = useState(defaultTabKey ?? TABS[0].key);
   const activeIndex = TABS.findIndex((t) => t.key === activeKey);
   const activeTab = TABS[activeIndex] ?? TABS[0];
   const activeItems = itemsByKey[activeKey] ?? [];
@@ -50,16 +68,13 @@ export default function InsightTabsCard({
             <button
               key={tab.key}
               onClick={() => setActiveKey(tab.key)}
-              className={`flex-1 bg-transparent pb-3.5 text-[15px] font-semibold transition-colors ${
-                isActive ? "text-[#F5F8FA]" : "text-[#7C93A8]"
-              }`}
+              className={`flex-1 bg-transparent pb-3.5 text-xs md:text-[15px] font-semibold transition-colors ${isActive ? "text-[#F5F8FA]" : "text-[#7C93A8]"
+                }`}
             >
               {tab.label}
             </button>
           );
         })}
-
-        {/* Marcador deslizante */}
         <div
           className={`absolute bottom-0 h-[2px] bg-[${activeTab.color}] transition-transform duration-300 ease-out`}
           style={{
@@ -71,22 +86,28 @@ export default function InsightTabsCard({
 
       {/* Items */}
       <div className="flex flex-col gap-5">
-        {activeItems.map((item, idx) => (
-          <div
-            key={idx}
-            className="flex gap-3.5 border-l-[3px] pl-3.5"
-            style={{ borderColor: activeTab.color }}
-          >
-            <div>
-              <div className="mb-1.5 text-[15px] font-bold text-[#F5F8FA]">
-                {item.title}
+        {activeItems.length === 0 ? (
+          <p className="m-0 text-sm text-[#7C93A8] italic">
+            Nenhum item encontrado nesta categoria.
+          </p>
+        ) : (
+          activeItems.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex gap-3.5 border-l-[3px] pl-3.5"
+              style={{ borderColor: activeTab.color }}
+            >
+              <div>
+                <div className="mb-1.5 text-[15px] font-semibold text-[#F5F8FA]">
+                  {item.title}
+                </div>
+                <p className="m-0 text-sm leading-relaxed text-[#C7D3DD] italic">
+                  {item.description}
+                </p>
               </div>
-              <p className="m-0 text-sm leading-relaxed text-[#C7D3DD]">
-                {item.description}
-              </p>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
