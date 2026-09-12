@@ -52,7 +52,6 @@ export default function Diretor() {
             badgeBg: "bg-[#12384B]",
             badgeText: "text-[#B9D8E6]",
             barColor: "bg-[#2DD4FF]",
-            barVisible: false
         },
         {
             label: "Tarefas Concluídas",
@@ -64,7 +63,6 @@ export default function Diretor() {
             badgeBg: "bg-[#103847]",
             badgeText: "text-[#8FE8FF]",
             barColor: "bg-[#21D4FD]",
-            barVisible: false
         },
         {
             label: "Oportunidades",
@@ -76,7 +74,6 @@ export default function Diretor() {
             badgeBg: "bg-[#3A2A0A]",
             badgeText: "text-[#FFD27A]",
             barColor: "bg-[#FFB020]",
-            barVisible: false
         },
         {
             label: "Clkjientes",
@@ -88,7 +85,6 @@ export default function Diretor() {
             badgeBg: "bg-[#0E3536]",
             badgeText: "text-[#7EF7EA]",
             barColor: "bg-[#00E5D0]",
-            barVisible: false
         }, {
             label: "Cliendtes",
             value: "64",
@@ -99,7 +95,6 @@ export default function Diretor() {
             badgeBg: "bg-[#0E3536]",
             badgeText: "text-[#7EF7EA]",
             barColor: "bg-[#00E5D0]",
-            barVisible: false
         }, {
             label: "Clientaes",
             value: "64",
@@ -110,7 +105,6 @@ export default function Diretor() {
             badgeBg: "bg-[#0E3536]",
             badgeText: "text-[#7EF7EA]",
             barColor: "bg-[#00E5D0]",
-            barVisible: false
         },
     ];
 
@@ -125,7 +119,6 @@ export default function Diretor() {
             badgeBg: "bg-[#12384B]",
             badgeText: "text-[#B9D8E6]",
             barColor: "bg-[#2DD4FF]",
-            barVisible: false
         },
         {
             label: "Tarefas Concluídas",
@@ -137,7 +130,6 @@ export default function Diretor() {
             badgeBg: "bg-[#103847]",
             badgeText: "text-[#8FE8FF]",
             barColor: "bg-[#21D4FD]",
-            barVisible: false
         },
         {
             label: "Oportunidades",
@@ -149,7 +141,6 @@ export default function Diretor() {
             badgeBg: "bg-[#3A2A0A]",
             badgeText: "text-[#FFD27A]",
             barColor: "bg-[#FFB020]",
-            barVisible: false
         }
     ];
 
